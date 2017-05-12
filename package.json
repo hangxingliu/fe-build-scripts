@@ -1,0 +1,23 @@
+{
+  "name": "fe-build-scripts",
+  "version": "1.0.0",
+  "description": "Frontend build scripts package",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test/config_reader.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hangxingliu/fe-build-scripts.git"
+  },
+  "keywords": [
+    "frontend",
+    "build"
+  ],
+  "author": "LiuYue",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/hangxingliu/fe-build-scripts/issues"
+  },
+  "homepage": "https://github.com/hangxingliu/fe-build-scripts#readme"
+}
