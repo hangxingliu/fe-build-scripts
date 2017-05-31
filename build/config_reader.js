@@ -1,3 +1,4 @@
+//@ts-check
 /// <reference path="../types/type.d.ts" />
 
 (function () {
@@ -45,6 +46,7 @@
 		/**
 		 * @type {ConfigObject}
 		 */
+		//@ts-ignore
 		let result = {};
 
 		result.name = config.name;
@@ -67,6 +69,7 @@
 		/**
 		 * @type {ProcessorConfigObject}
 		 */
+		//@ts-ignore
 		let processor = {};
 		let configProcessor = config.processor || {};
 		
@@ -75,6 +78,9 @@
 		processor.autoprefixer = { enable: !!configProcessor.autoprefixer };
 		processor.ejs = { enable: !!configProcessor.ejs };
 
+		processor.html_minifier = isObjectHasEnableField(configProcessor.html_minifier)
+			? configProcessor.html_minifier
+			: { enable: !!configProcessor.html_minifier };
 		processor.babel = isObjectHasEnableField(configProcessor.babel)
 			? configProcessor.babel
 			:{ enable: !!configProcessor.babel };

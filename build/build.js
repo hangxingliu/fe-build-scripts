@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+// version 0.1.0
+
 /// <reference path="../types/type.d.ts" />
 
 const CONFIG_FILE = `${__dirname}/build.config.yaml`;
@@ -22,6 +24,7 @@ let ejs = require('ejs'),
 	autoprefixer = require('autoprefixer'),
 	cheerio = require('cheerio'),
 	postcss = require('postcss'),
+	htmlMinifier = require('html-minifier'),
 	sourceMapConvert = require('convert-source-map');
 
 let watch = require('watch');
@@ -121,6 +124,8 @@ function renderPages() {
 			if (err) return console.error(`  error: render page ${path}`.red, '\n', err.stack);
 			if (processorConfig.ejs_template_tags.enable)
 				content = renderEjsTemplateTags(content);
+			if (processorConfig.html_minifier.enable)
+				content = htmlMinifier.minify(content, processorConfig.html_minifier);
 			writeFileWithMkdirsSync(`${config.dist}/${name}`, content);
 		}
 	});
@@ -138,10 +143,11 @@ function renderEjsTemplateTags(html) {
 		let $ = cheerio.load(html);
 		let $tags = $(selector);
 		for (var i = 0; i < $tags.length; i++) {
-			let $tag = $tags.eq(i);
-			$tag.html(fs.readFileSync(`${processorConfig.ejs.modules}/${$tag.attr('src')}`, 'utf8')
-				.replace(/<%([\s\S]*?)%>/g, match =>
-					(ejsTagCache.push(match), `${start}${ejsTagCache.length - 1}${end}`)));
+			let $tag = $tags.eq(i), html = fs.readFileSync(`${config.src}/${$tag.attr('src')}`, 'utf8');
+			if (processorConfig.html_minifier.enable)
+				html = htmlMinifier.minify(html, processorConfig.html_minifier);
+			$tag.html(html.replace(/<%([\s\S]*?)%>/g, match =>
+				(ejsTagCache.push(match), `${start}${ejsTagCache.length - 1}${end}`)));
 			$tag.removeAttr('src');
 		}
 		let newHTML = $.html({ decodeEntities: false }); //避免中文被编码

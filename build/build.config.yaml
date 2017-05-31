@@ -26,6 +26,10 @@ processor:
     babel: 
         enable: true
         babelrc: .babelrc
+    html_minifier:
+        enable: true
+        removeComments: true
+        collapseWhitespace: true
     ejs: true
     ejs_variables:
         enable: true

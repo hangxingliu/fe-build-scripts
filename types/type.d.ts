@@ -25,12 +25,17 @@ type ProcessorConfigObject = {
 	autoprefixer: BaseConfigProcessorObject;
 	ejs: BaseConfigProcessorObject;
 	babel: BaseConfigProcessorObject & BabelProcessorExtend;
+	html_minifier: BaseConfigProcessorObject & HtmlMinifierProcessorExtend;
 	ejs_variables: BaseConfigProcessorObject & EjsVariablesProcessorExtend;
 	ejs_template_tags: BaseConfigProcessorObject & EjsTemplateTagsProcessorExtend;
 }
 
 type BaseConfigProcessorObject = {
 	enable: boolean;
+};
+type HtmlMinifierProcessorExtend = {
+	removeComments: boolean,
+	collapseWhitespace: boolean
 };
 type BabelProcessorExtend = {
 	babelrc: string;
