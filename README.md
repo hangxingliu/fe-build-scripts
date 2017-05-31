@@ -18,7 +18,7 @@
 3. config `build/build.config.yaml`
 4. execute `./build/build.js` or `./build/build.js -w`
 
-HTML => EJS => HTML
+HTML => EJS/PUG => HTML
 JS, JS, .... => Browserify => Babel => JS
 CSS/LESS/SASS => Processor => CSS
 Assets => Copy => Assets

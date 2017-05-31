@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// version 0.1.0
+// version 0.2.0
 
 /// <reference path="../types/type.d.ts" />
 
@@ -17,6 +17,7 @@ let fs = require('fs-extra'),
 
 //>>>>>>>>> Processor
 let ejs = require('ejs'),
+	pug = require('pug'),	
 	yaml = require('js-yaml'),
 	browserify = require('browserify'),
 	babel = require('babel-core'),
@@ -86,9 +87,15 @@ function copyAssets() {
 }
 
 
-//>>>>>>>>>>  EJS
+//>>>>>>>>>>  EJS/Pug
+function isPugFile(file) { return file.endsWith('.pug') || file.endsWith('.jade'); }
 function setEjsFileLoader() {
 	ejs.fileLoader = filePath => {
+		if (isPugFile(filePath))
+			return processorConfig.pug ?
+				pug.compileFile(filePath, { basedir: config.src, filename: basename(filePath) })(ejsRenderVariables)
+				: (console.error(`  error: The include file is a pug file. And you had not turn on the pug processor in config file!`.red, '\n',
+					`    ${filePath}`.red), "");
 		if (!fs.existsSync(filePath)) {
 			filePath.endsWith('.ejs') && (filePath = filePath.replace(/\.ejs$/, '.html'));
 			if (!fs.existsSync(filePath))
@@ -117,6 +124,10 @@ function renderPages() {
 	files.map(name => {
 		count++;
 		let path = joinPath(config.src, name);
+		if (isPugFile(name))
+			processorConfig.pug ?
+				callback(null, pug.compileFile(path, { basedir: config.src, filename: basename(path) })(ejsRenderVariables))
+				: fs.readFile(path, 'utf8', callback);
 		processorConfig.ejs ? ejs.renderFile(path, ejsRenderVariables, { root: config.src }, callback)	
 			: fs.readFile(path, 'utf8', callback);
 		function callback(err, content) {
@@ -254,7 +265,7 @@ function watchSources() {
 		console.log("watch >", path);
 		if (path.endsWith('.yaml'))
 			return loadEjsVariables() + renderPages();
-		if (path.endsWith('.html'))
+		if (path.endsWith('.html') || path.endsWith('.ejs') || path.endsWith('.pug') || path.endsWith('.jade'))
 			return renderPages();
 		if (path.endsWith('.js')) 
 			return handlerScripts();

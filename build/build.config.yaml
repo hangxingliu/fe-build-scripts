@@ -27,10 +27,11 @@ processor:
         enable: true
         babelrc: .babelrc
     html_minifier:
-        enable: true
+        enable: false
         removeComments: true
         collapseWhitespace: true
     ejs: true
+    pug: true
     ejs_variables:
         enable: true
         files:

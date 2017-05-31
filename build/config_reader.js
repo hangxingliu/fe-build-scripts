@@ -77,6 +77,7 @@
 		processor.less = { enable: !!configProcessor.less };
 		processor.autoprefixer = { enable: !!configProcessor.autoprefixer };
 		processor.ejs = { enable: !!configProcessor.ejs };
+		processor.pug = { enable: !!configProcessor.pug };
 
 		processor.html_minifier = isObjectHasEnableField(configProcessor.html_minifier)
 			? configProcessor.html_minifier

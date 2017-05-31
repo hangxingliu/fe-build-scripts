@@ -24,6 +24,7 @@ type ProcessorConfigObject = {
 	less: BaseConfigProcessorObject;
 	autoprefixer: BaseConfigProcessorObject;
 	ejs: BaseConfigProcessorObject;
+	pug: BaseConfigProcessorObject;
 	babel: BaseConfigProcessorObject & BabelProcessorExtend;
 	html_minifier: BaseConfigProcessorObject & HtmlMinifierProcessorExtend;
 	ejs_variables: BaseConfigProcessorObject & EjsVariablesProcessorExtend;
