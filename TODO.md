@@ -11,3 +11,8 @@
 - [ ] ext name map (example: .ts => .js)
 - [ ] build script install
 - [ ] add dependencies
+- [ ] add hook scripts support
+	- [ ] start build
+	- [ ] start watching
+	- [ ] build finish
+	- [ ] more ...
