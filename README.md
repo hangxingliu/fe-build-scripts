@@ -21,7 +21,8 @@
 HTML => EJS/PUG => HTML  
 JS, JS, .... => Browserify => Babel => JS  
 CSS/LESS/SASS => Processor => CSS  
-Assets => Copy => Assets  
+Assets => Copy => Assets 
+BrowserSync  
 
 ## TODO
 
