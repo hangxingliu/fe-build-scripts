@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// version 0.2.0
+// version 0.3.0
 
 //@ts-check
 /// <reference path="../types/type.d.ts" />
@@ -155,8 +155,10 @@ function renderPages(callback) {
 			if (err) return callback({ path, err });
 			if (processorConfig.ejs_template_tags.enable)
 				content = renderEjsTemplateTags(content);
-			if (processorConfig.html_minifier.enable)
-				content = htmlMinifier.minify(content, processorConfig.html_minifier);
+			if (processorConfig.html_minifier.enable) {
+				try { content = htmlMinifier.minify(content, processorConfig.html_minifier); }
+				catch (err) { return callback({ path, err });}
+			}
 			writeFileWithMkdirsSync(`${config.dist}/${name}`, content);
 			callback(null, true);
 		}

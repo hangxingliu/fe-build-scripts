@@ -5,7 +5,7 @@
 - [x] add compress HTML support
 - [x] pug/jade
 - [ ] why could not turn off the babel
-- [ ] html minify error handler
+- [x] html minify error handler
 - [ ] sources map switch(on/off)
 - [x] browserSync support
 - [ ] ext name map (example: .ts => .js)
