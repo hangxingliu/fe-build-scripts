@@ -7,7 +7,7 @@
 - [ ] why could not turn off the babel
 - [ ] html minify error handler
 - [ ] sources map switch(on/off)
-- [ ] browserSync support
+- [x] browserSync support
 - [ ] ext name map (example: .ts => .js)
 - [ ] build script install
 - [ ] add dependencies
