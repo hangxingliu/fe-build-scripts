@@ -23,6 +23,9 @@ processor:
     sass: true
     less: true
     autoprefixer: true
+    browser_sync: 
+        enable: true
+        server: "dist"
     babel: 
         enable: true
         babelrc: .babelrc
