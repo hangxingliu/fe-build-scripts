@@ -19,3 +19,6 @@
 	- [ ] start watching
 	- [ ] build finish
 	- [ ] more ...
+	- [ ] Rules:
+		- HOOK\_BEFORE\_ALL HOOK\_AFTER\_DONE HOOK\_AFTER\_EACH\_WATCH
+		- js bash bat
