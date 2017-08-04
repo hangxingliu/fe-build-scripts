@@ -6,11 +6,14 @@
 - [x] pug/jade
 - [ ] why could not turn off the babel
 - [x] html minify error handler
+- [ ] add ejs template tag glob path support
 - [ ] sources map switch(on/off)
 - [x] browserSync support
 - [ ] ext name map (example: .ts => .js)
 - [ ] build script install
 - [ ] add dependencies
+- [x] add javascript files concat(purely concatenate for libraries)
+	- [ ] support sources map for concatenated d file
 - [ ] add hook scripts support
 	- [ ] start build
 	- [ ] start watching

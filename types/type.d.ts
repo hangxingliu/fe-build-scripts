@@ -5,6 +5,7 @@ type ConfigObject = {
 
 	src: string;
 	src_assets: FromToObject[];
+	concat: ConcatenateObject[];
 	
 	src_globs: string[];
 	src_script_globs: string[];
@@ -18,6 +19,11 @@ type FromToObject = {
 	name: string;
 	from: string;
 	to: string;
+};
+type ConcatenateObject = {
+	name: string;
+	to: string;
+	from: string[];
 };
 type ProcessorConfigObject = {
 	sass: BaseConfigProcessorObject;

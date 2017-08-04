@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+pushd test-env
+node ../build/build.js

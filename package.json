@@ -4,7 +4,7 @@
   "description": "Frontend build scripts package",
   "main": "index.js",
   "scripts": {
-    "test": "node test/config_reader.js"
+    "test-config-reader": "node test/config_reader.js"
   },
   "repository": {
     "type": "git",

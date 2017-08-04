@@ -65,6 +65,8 @@ let config = null;
  */
 let processorConfig = null;
 
+const EMPTY_CALLBACK = (...args) => void args;
+
 function main() {
 	let opts = loadLaunchParameters(),
 		exit = sign => process.exit(sign);
@@ -76,7 +78,8 @@ function main() {
 
 	config.clean_dist && (cleanTarget() || exit(1));
 	copyAssets() || exit(2);
-
+	config.concat && config.concat.length && concatFiles(err => err && exit(3));
+	
 	(processorConfig.ejs || processorConfig.ejs_template_tags) && setEjsFileLoader();
 	
 	processorConfig.ejs_variables && (loadEjsVariables() || exit(3));
@@ -105,6 +108,18 @@ function copyAssets() {
 		return log.fail(err), false;
 	}
 	return log.done(), true;
+}
+function concatFiles(done = EMPTY_CALLBACK) {
+	let log = start(`concat files`);
+	Async.map(config.concat, (concat, then) => {
+		console.log(`concatenating file ${concat.name} `);
+		Async.parallel(concat.from.map(from => (readDone => readFile(from, readDone))), (err, contents) => {
+			return err
+				? (console.error(`  error: read source file for concatenating failed!`.red), then(err))
+				: (writeFileWithMkdirsSync(concat.to, contents.join('\n')), then());
+			// TODO add sources map
+		});
+	}, err => err ? (log.fail(err), done(err)) : (log.done(), done()));
 }
 
 

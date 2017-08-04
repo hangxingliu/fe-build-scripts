@@ -27,6 +27,12 @@
 		if (!isStringOrStringArray(config.src.styles))
 			throw incompleteError(`config.src.styles`, 'String/String[]');
 		
+		if (isObject(config.concat))
+			Object.keys(config.concat).map(key => {
+				if (!isStringArray(config.concat[key]))
+					throw incompleteError(`config.concat["${key}"]`, 'string[]');
+			});
+
 		if (!isStringOrStringArray(config.src.assets))
 			throw incompleteError(`config.src.assets`, 'String/String[]');
 		if (!isStringOrStringArray(config.src.pages))
@@ -38,7 +44,7 @@
 			throw incompleteError(`config.dist.base`, 'String');
 		if (!isBoolean(config.dist.clean))
 			throw incompleteError(`config.dist.clean`, 'Boolean');
-		
+
 		let basePath = process.cwd(),
 			distBasePath = joinPath(basePath, config.dist.base),
 			srcBasePath = joinPath(basePath, config.src.base);
@@ -66,6 +72,14 @@
 		let stylesConfig = config.src.styles;
 		result.src_styles_globs = (isString(stylesConfig) ? [stylesConfig] : stylesConfig);
 		
+		let concatConfig = config.src.concat || {};
+		result.concat = Object.keys(concatConfig).map(distFileName => ({
+			name: distFileName,
+			to: joinPath(distBasePath, distFileName),
+			from: concatConfig[distFileName].map(srcFileName => joinPath(srcBasePath, srcFileName))
+		}));
+
+
 		/**
 		 * @type {ProcessorConfigObject}
 		 */

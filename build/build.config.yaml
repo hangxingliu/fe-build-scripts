@@ -9,6 +9,10 @@ src:
         - "pages/*.html"
     scripts:
         - "scripts/index.js"
+    concat:
+        "scripts/libs.js":
+            - "libs/test1.js"
+            - "libs/test2.js"
     styles:
         - "styles/*.scss"
         - "styles/*.css"
@@ -42,3 +46,4 @@ processor:
     ejs_template_tags: 
         enable: true
         selector: script[type="text/template"]
+        
