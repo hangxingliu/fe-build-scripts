@@ -4,7 +4,7 @@
 - [ ] add compress css support
 - [x] add compress HTML support
 - [x] pug/jade
-- [ ] why could not turn off the babel
+- [x] why could not turn off the babel
 - [x] html minify error handler
 - [ ] add ejs template tag glob path support
 - [ ] sources map switch(on/off)

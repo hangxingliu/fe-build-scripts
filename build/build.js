@@ -220,32 +220,42 @@ function handlerScripts(callback) {
 }
 function browserifyAndBabel(from, to, then) {
 	let scriptName = basename(to);
-	//Extend .babelrc path
-	let babelrcPath = '';
-	if ((babelrcPath = processorConfig.babel.babelrc) &&
-		(!isAbsolute(babelrcPath)) )
-		babelrcPath = joinPath(process.cwd(), babelrcPath);
-	
 	browserify([from], { debug: true, basedir: dirname(to) })
 		.bundle((err, buffer) => {
 			if (err) return console.error(`  error: browserify ${scriptName}`.red, "\n", err), then();	
-			let codes = String(buffer);	
-			let sourceMap = JSON.parse(sourceMapConvert.fromSource(codes).toJSON());	
-			codes = sourceMapConvert.removeMapFileComments(codes);	
-			try {
-				let options = {
-					sourceMaps: true,
-					inputSourceMap: sourceMap
-				};
-				if (babelrcPath) options.extends = babelrcPath;
-				let result = babel.transform(codes,  options);
-				writeFileWithMkdirsSync(to, result.code + `\n//# sourceMappingURL=${scriptName}.map`);
-				fs.writeFileSync(to + ".map", JSON.stringify(result.map, null, "\t"));
-				return then();
-			} catch (ex) {
-				return console.error(`  error: babel transformFile ${scriptName}`.red, "\n", ex.stack), then();
+			let code = String(buffer);	
+			let map = JSON.parse(sourceMapConvert.fromSource(code).toJSON());	
+			code = sourceMapConvert.removeMapFileComments(code);	
+			if (processorConfig.babel.enable) {
+				let babel = babelTransform(scriptName, code, map, getBabelrcPath());
+				if (babel.err) return then(babel.err);
+				code = babel.code; map = babel.map;
 			}
+			try {
+				writeFileWithMkdirsSync(to, code);
+				fs.writeFileSync(`${to}.map`, JSON.stringify(map, null, '\t'));
+			} catch (ex) {
+				return console.error(`  error: write codes and sources map to target file failed!`.red, "\n", ex.stack || ex), then(ex);
+			}
+			return then();
 		});
+}
+function getBabelrcPath() {
+	let path = processorConfig.babel.babelrc;
+	if (path && !isAbsolute(path)) return joinPath(process.cwd(), path);
+}
+function babelTransform(scriptName, codes, sourcesMap, babelrcPath) {
+	try {
+		let options = { sourceMaps: true, inputSourceMap: sourcesMap };
+		if (babelrcPath) options.extends = babelrcPath;
+		let result = babel.transform(codes, options);
+		return {
+			code: result.code + `\n//# sourceMappingURL=${scriptName}.map`,
+			map: result.map
+		};
+	} catch (err) {
+		return console.error(`  error: babel transform ${scriptName}`.red, "\n", err.stack), { err };
+	}
 }
 
 //>>>>>>>>>>> handlerStyles
