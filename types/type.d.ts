@@ -6,6 +6,7 @@ type ConfigObject = {
 	src: string;
 	src_assets: FromToObject[];
 	concat: ConcatenateObject[];
+	hook: HookScriptMap;
 	
 	src_globs: string[];
 	src_script_globs: string[];
@@ -25,6 +26,12 @@ type ConcatenateObject = {
 	to: string;
 	from: string[];
 };
+type HookScriptMap = { [hookName: string]: HookScriptObject; };
+type HookScriptObject = {
+	command: string;
+	asynchronous: boolean;
+};
+
 type ProcessorConfigObject = {
 	sass: BaseConfigProcessorObject;
 	less: BaseConfigProcessorObject;

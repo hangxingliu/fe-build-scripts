@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// version 0.3.0
+// version 0.4.0
 
 //@ts-check
 /// <reference path="../types/type.d.ts" />
@@ -12,11 +12,12 @@ require('colors');
 let fs = require('fs-extra'),
 	Options = require('commander'),
 	glob = require('glob'),
-	yaml = require('js-yaml'),	
+	yaml = require('js-yaml'),
 	postcss = require('postcss'),
 	browserify = require('browserify'),
 	sourceMapConvert = require('convert-source-map'),
 	{ join: joinPath, dirname, basename, isAbsolute } = require('path'),
+	{ exec } = require('child_process'),
 	Async = require('async'),
 	{ read: loadConfig } = require('./config_reader');
 
@@ -56,6 +57,7 @@ let start = name => {
 	};
 };
 
+let buildCounter = 0;
 /**
  * @type {ConfigObject}
  */
@@ -76,22 +78,33 @@ function main() {
 	//加载相应的插件
 	loadProcessors(opts);
 
-	config.clean_dist && (cleanTarget() || exit(1));
-	copyAssets() || exit(2);
-	config.concat && config.concat.length && concatFiles(err => err && exit(3));
-	
-	(processorConfig.ejs || processorConfig.ejs_template_tags) && setEjsFileLoader();
-	
-	processorConfig.ejs_variables && (loadEjsVariables() || exit(3));
+	execHook('before_all', err => {
+		if (err) return exit(11);
 
-	renderPages();
-	handlerScripts();
-	handlerStyles();
+		config.clean_dist && (cleanTarget() || exit(1));
+		copyAssets() || exit(2);
+		config.concat && config.concat.length && concatFiles(err => err && exit(3));
+	
+		(processorConfig.ejs || processorConfig.ejs_template_tags) && setEjsFileLoader();
+	
+		processorConfig.ejs_variables && (loadEjsVariables() || exit(4));
 
-	//opts.watch 是启动参数 watch
-	//@ts-ignore
-	opts.watch ? (console.log("# Watch mode is on".bold), watchSources()) 	
-		: console.log("  Tip: -w option could turn on the watch mode".grey);
+		let log = start('first build');
+		Async.parallel([
+			renderPages,
+			handlerScripts,
+			handlerStyles
+		], (err) => {
+			if (err) return log.fail(err);
+			buildCounter++;
+			execHook('after_build', err => err ? exit(10) : log.done());
+		});
+	
+		//opts.watch 是启动参数 watch
+		//@ts-ignore
+		opts.watch ? (console.log("# Watch mode is on".bold), watchSources())
+			: console.log("  Tip: -w option could turn on the watch mode".grey);
+	});
 }
 
 function cleanTarget() {
@@ -328,9 +341,14 @@ function watchSources() {
 			path.endsWith('.scss') || path.endsWith('.less')) 
 			return handlerStyles(reloadCSS);
 	});
-	function reloadHTML() { bs && bs.reload('*.html') }
-	function reloadJS() { bs && bs.reload('*.js') }
-	function reloadCSS() { bs && bs.reload('*.css') }
+	function reloadHTML() { reload('*.html') }
+	function reloadJS() { reload('*.js') }
+	function reloadCSS() { reload('*.css') }
+	function reload(reloadFiles) {
+		buildCounter++;
+		execHook('after_build', () =>
+			bs && bs.reload(reloadFiles));
+	}
 	
 }
 
@@ -340,6 +358,22 @@ function loadLaunchParameters() {
 		.parse(process.argv);
 }
 
+//>>>>>>>>>>>> Execute Hook
+function execHook(hookName, then = EMPTY_CALLBACK) {
+	let hook = config.hook[hookName];
+	if (!hook) return then();
+
+	let { command, asynchronous } = hook,
+		log = start(`hook ${hookName}`);
+	exec(`${command} "${buildCounter}"`, { cwd: __dirname, encoding: 'utf8' },
+		(err, stdout, stderr) => {
+			if (stdout) stdout.trim().split('\n').map(line => `hook out: ${line}`).map(line => console.log(line));
+			if (stderr) stderr.trim().split('\n').map(line => `hook err: ${line}`).map(line => console.error(line));
+			err ? log.fail(err, `executing hook script "${hookName}" failed!`) : log.done();
+			if (!asynchronous) err ? then(err) : then();	
+		});
+	if (asynchronous) then();
+}
 //>>>>>>>>>>>> Glob
 function globFiles(globArray, options) {
 	let allFiles = [];

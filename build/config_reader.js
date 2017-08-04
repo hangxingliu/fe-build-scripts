@@ -1,7 +1,15 @@
+// version 0.4.0
+
 //@ts-check
 /// <reference path="../types/type.d.ts" />
 
 (function () {
+	const VALID_SYNC_HOOKS = ['before_all', 'after_build'];
+	const HOOK_ASYNC_PREFIX = 'async_';
+
+	const VALID_ASYNC_HOOKS = VALID_SYNC_HOOKS.map(name => HOOK_ASYNC_PREFIX + name);
+	const VALID_HOOKS = [].concat(VALID_ASYNC_HOOKS, VALID_SYNC_HOOKS);
+
 	let yaml = require('js-yaml'),
 		{ readFileSync } = require('fs-extra'),
 		{ join: joinPath } = require('path');
@@ -27,11 +35,18 @@
 		if (!isStringOrStringArray(config.src.styles))
 			throw incompleteError(`config.src.styles`, 'String/String[]');
 		
-		if (isObject(config.concat))
-			Object.keys(config.concat).map(key => {
-				if (!isStringArray(config.concat[key]))
-					throw incompleteError(`config.concat["${key}"]`, 'string[]');
+		if (isObject(config.src.concat))
+			Object.keys(config.src.concat).map(key => {
+				if (!isStringArray(config.src.concat[key]))
+					throw incompleteError(`config.src.concat["${key}"]`, 'string[]');
 			});
+		
+		if (isObject(config.hook))
+			Object.keys(config.hook).map(hookName => {
+				if (VALID_HOOKS.indexOf(hookName) < 0) throw incompleteError(`config.hook["${hookName}"]`, `valid hook event name`);
+				if (!isString(config.hook[hookName]))
+					throw incompleteError(`config.hook["${hookName}"]`, `string`);
+			})
 
 		if (!isStringOrStringArray(config.src.assets))
 			throw incompleteError(`config.src.assets`, 'String/String[]');
@@ -79,6 +94,15 @@
 			from: concatConfig[distFileName].map(srcFileName => joinPath(srcBasePath, srcFileName))
 		}));
 
+		let hookConfig = config.hook || {},
+			hookResult = {};
+		Object.keys(hookConfig).map(hookName => {
+			hookResult[hookName.replace(HOOK_ASYNC_PREFIX, '')] = {
+				command: hookConfig[hookName],
+				asynchronous: hookName.startsWith(HOOK_ASYNC_PREFIX)
+			};
+		});
+		result.hook = hookResult;
 
 		/**
 		 * @type {ProcessorConfigObject}

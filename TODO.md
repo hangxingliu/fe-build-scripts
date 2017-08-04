@@ -14,11 +14,7 @@
 - [ ] add dependencies
 - [x] add javascript files concat(purely concatenate for libraries)
 	- [ ] support sources map for concatenated d file
-- [ ] add hook scripts support
-	- [ ] start build
-	- [ ] start watching
-	- [ ] build finish
-	- [ ] more ...
-	- [ ] Rules:
-		- HOOK\_BEFORE\_ALL HOOK\_AFTER\_DONE HOOK\_AFTER\_EACH\_WATCH
-		- js bash bat
+- [x] add hook scripts support
+	- [x] before all
+	- [x] after build
+	- [x] async/sync

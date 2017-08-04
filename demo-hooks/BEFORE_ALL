@@ -1,0 +1,3 @@
+#!/usr/bin/env node
+
+console.log("HOOK: Before all building, cleaning and watching!");

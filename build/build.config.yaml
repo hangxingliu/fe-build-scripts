@@ -23,6 +23,15 @@ dist:
 watch:
     - "src"
 
+hook:
+    before_all: "node ../demo-hooks/BEFORE_ALL"
+    # after_build: "node ../demo-hooks/AFTER_BUILD"
+    # parameters: build_counter:interger
+
+    # async_before_all: "node ../demo-hooks/BEFORE_ALL"
+    async_after_build: "node ../demo-hooks/AFTER_BUILD"
+
+
 processor:
     sass: true
     less: true
