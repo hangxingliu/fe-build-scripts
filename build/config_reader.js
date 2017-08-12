@@ -1,11 +1,11 @@
 /**
  * frontend build scripts
- * version: 0.4.2
- * date: 2017-08-13 05:19
+ * version: 0.5.0
+ * date: 2017-08-13 07:05
  */
 
 //@ts-check
-/// <reference path="../types/type.d.ts" />
+/// <reference path="type.d.ts" />
 
 (function () {
 	const VALID_SYNC_HOOKS = ['before_all', 'after_build'];
@@ -125,6 +125,9 @@
 		processor.ejs = { enable: !!configProcessor.ejs };
 		processor.pug = { enable: !!configProcessor.pug };
 
+		processor.source_map = isObjectHasEnableField(configProcessor.source_map)
+			? configProcessor.source_map
+			: { enable: !!configProcessor.source_map };
 		processor.html_minifier = isObjectHasEnableField(configProcessor.html_minifier)
 			? configProcessor.html_minifier
 			: { enable: !!configProcessor.html_minifier };

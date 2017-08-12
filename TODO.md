@@ -6,8 +6,7 @@
 - [x] pug/jade
 - [x] why could not turn off the babel
 - [x] html minify error handler
-- [ ] add ejs template tag glob path support
-- [ ] sources map switch(on/off)
+- [x] sources map switch(on/off)
 - [x] browserSync support
 - [ ] ext name map (example: .ts => .js)
 - [ ] build script install

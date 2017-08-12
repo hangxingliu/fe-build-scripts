@@ -33,6 +33,10 @@ hook:
 
 
 processor:
+    source_map:
+        enable: true
+        js: true
+        css: true
     sass: true
     less: true
     autoprefixer: true

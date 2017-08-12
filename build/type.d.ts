@@ -33,6 +33,7 @@ type HookScriptObject = {
 };
 
 type ProcessorConfigObject = {
+	source_map: BaseConfigProcessorObject & SourceMapProcessorExtend;
 	sass: BaseConfigProcessorObject;
 	less: BaseConfigProcessorObject;
 	autoprefixer: BaseConfigProcessorObject;
@@ -47,6 +48,10 @@ type ProcessorConfigObject = {
 
 type BaseConfigProcessorObject = {
 	enable: boolean;
+};
+type SourceMapProcessorExtend = {
+	js: boolean;
+	css: boolean;
 };
 type HtmlMinifierProcessorExtend = {
 	removeComments: boolean,
