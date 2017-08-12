@@ -2,8 +2,8 @@
 
 /**
  * frontend build scripts
- * version: 0.4.1
- * date: 2017-08-13 04:55
+ * version: 0.4.2
+ * date: 2017-08-13 05:19
  */
 
 //@ts-check
@@ -304,7 +304,7 @@ function handlerSass(from, to, indented, then){
 		sourceMap: SourcesMapTo,
 	}, (err, result) => {
 		if (err) return console.error(`  error: sass compile ${styleName}`.red, '\n', err), then();
-		postcss([autoprefixer]).process(result.css, {
+		postcss(autoprefixer?[autoprefixer]:[]).process(result.css, {
 			from: styleName,
 			to: styleName.replace(/\.scss$/, '.css'),
 			map: { inline: false, prev: JSON.parse(result.map) }
