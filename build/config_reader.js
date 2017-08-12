@@ -1,4 +1,8 @@
-// version 0.4.0
+/**
+ * frontend build scripts
+ * version: 0.4.1
+ * date: 2017-08-13 04:55
+ */
 
 //@ts-check
 /// <reference path="../types/type.d.ts" />
@@ -30,6 +34,8 @@
 		if (!isString(config.src.base))
 			throw incompleteError(`config.src.base`, 'String');
 		
+		if (isNull(config.src.scripts)) config.src.scripts = [];
+		if (isNull(config.src.styles)) config.src.styles = [];
 		if (!isStringOrStringArray(config.src.scripts))
 			throw incompleteError(`config.src.scripts`, 'String/String[]');
 		if (!isStringOrStringArray(config.src.styles))
@@ -48,6 +54,8 @@
 					throw incompleteError(`config.hook["${hookName}"]`, `string`);
 			})
 
+		if (isNull(config.src.assets)) config.src.assets = [];
+		if (isNull(config.src.pages)) config.src.pages = [];
 		if (!isStringOrStringArray(config.src.assets))
 			throw incompleteError(`config.src.assets`, 'String/String[]');
 		if (!isStringOrStringArray(config.src.pages))
@@ -139,6 +147,7 @@
 	
 	}
 	
+	function isNull(obj) { return !obj && typeof obj == 'object'; }
 	function isObject(obj) { return obj && typeof obj == 'object'; }
 	function isString(obj) { return typeof obj == 'string'; }
 	function isBoolean(obj) { return typeof obj == 'boolean'; }

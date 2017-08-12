@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
-// version 0.4.0
+/**
+ * frontend build scripts
+ * version: 0.4.1
+ * date: 2017-08-13 04:55
+ */
 
 //@ts-check
 /// <reference path="../types/type.d.ts" />
@@ -85,9 +89,9 @@ function main() {
 		copyAssets() || exit(2);
 		config.concat && config.concat.length && concatFiles(err => err && exit(3));
 	
-		(processorConfig.ejs || processorConfig.ejs_template_tags) && setEjsFileLoader();
+		(processorConfig.ejs.enable || processorConfig.ejs_template_tags.enable) && setEjsFileLoader();
 	
-		processorConfig.ejs_variables && (loadEjsVariables() || exit(4));
+		processorConfig.ejs_variables.enable && (loadEjsVariables() || exit(4));
 
 		let log = start('first build');
 		Async.parallel([
@@ -140,9 +144,10 @@ function concatFiles(done = EMPTY_CALLBACK) {
 function isPugFile(file) { return file.endsWith('.pug') || file.endsWith('.jade'); }
 function getPugOptions(filePath) { return { basedir: config.src, filename: basename(filePath) }; }
 function setEjsFileLoader() {
+	if (!ejs) return;
 	ejs.fileLoader = filePath => {
 		if (isPugFile(filePath))
-			return processorConfig.pug ?
+			return processorConfig.pug.enable ?
 				pug.compileFile(filePath, getPugOptions(filePath))(ejsRenderVariables)
 				: (console.error(`  error: The include file is a pug file. And you had not turn on the pug processor in config file!`.red, '\n',
 					`    ${filePath}`.red), "");
@@ -173,9 +178,9 @@ function renderPages(callback) {
 	console.log(` pages count: ${files.length}`);
 	Async.map(files, (name, callback) => {
 		let path = joinPath(config.src, name);
-		if (isPugFile(name) && processorConfig.pug)
+		if (isPugFile(name) && processorConfig.pug.enable)
 			return render(null, pug.compileFile(path, getPugOptions(path))(ejsRenderVariables));
-		if (processorConfig.ejs)
+		if (processorConfig.ejs.enable)
 			return ejs.renderFile(path, ejsRenderVariables, { root: config.src }, render);
 		readFile(path, render);
 
