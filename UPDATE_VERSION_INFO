@@ -1,0 +1,38 @@
+#!/usr/bin/env node
+
+let fs = require('fs');
+
+let now = getNowDateTimeString(),
+	version = getPackageVersion();
+
+const SOURCE_FILES = [
+	'build/build.js',
+	'build/config_reader.js'	
+];
+
+console.log(`  version:   ${version}\n  dateTime:  ${now}\n  =======================`);
+SOURCE_FILES.map(read);
+
+function read(file = '') {
+	fs.readFile(file, 'utf8', ioCallback(handler, file));
+}
+function handler(content = '', file = '') {
+	content = content.replace(/(\*\s+version:\s+)(.+)([\r\n]+)/, `$1${version}$3`)
+		.replace(/(\*\s+date:\s+)(.+)([\r\n]+)/, `$1${now}$3`);
+	fs.writeFile(file, content, ioCallback(file => console.log(`  done: ${file}`), file));	
+}
+
+function ioCallback(callback, ...p) { 
+	return (err, ...result) => err
+	? (console.error(err.stack || err), process.exit(1))
+	: callback(...result, ...p);
+}
+
+function getPackageVersion() { return require('./package.json').version; }
+function getNowDateTimeString() {
+	let date = new Date();
+	return `${date.getFullYear()}-${to2(date.getMonth() + 1)}-${to2(date.getDate())}` +
+		` ${to2(date.getHours())}:${to2(date.getMinutes())}`;
+}
+function to2(num = 0) { return num >= 10 ? `${num}` : (num > 0 ? `0${num}` : `00`); }
+
