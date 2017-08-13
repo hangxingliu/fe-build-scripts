@@ -37,6 +37,11 @@ processor:
         enable: true
         js: true
         css: true
+    watchify:
+        delay: 100
+        ignoreWatch:
+            - '**/node_modules/**'
+        poll: false
     sass: true
     less: true
     autoprefixer: true

@@ -34,6 +34,7 @@ type HookScriptObject = {
 
 type ProcessorConfigObject = {
 	source_map: BaseConfigProcessorObject & SourceMapProcessorExtend;
+	watchify: BaseConfigProcessorObject & WatchifyProcessorExtend;
 	sass: BaseConfigProcessorObject;
 	less: BaseConfigProcessorObject;
 	autoprefixer: BaseConfigProcessorObject;
@@ -52,6 +53,11 @@ type BaseConfigProcessorObject = {
 type SourceMapProcessorExtend = {
 	js: boolean;
 	css: boolean;
+};
+type WatchifyProcessorExtend = {
+	delay: number;
+	ignoreWatch: string[];
+	poll: boolean;
 };
 type HtmlMinifierProcessorExtend = {
 	removeComments: boolean,
