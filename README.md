@@ -18,13 +18,48 @@
 3. config `build/build.config.yaml`
 4. execute `./build/build.js` or `./build/build.js -w`
 
-### What scripts do
+## What scripts do
 
-- HTML => EJS/PUG => HTML  
-- JS, JS, .... => Browserify => Babel => JS  
-- CSS/LESS/SASS => Processor => CSS  
-- Asset files => Copy => Asset files   
-- BrowserSync  
+### Pages
+
+- HTML/Ejs/Pug  == Inject variables(optional) ==> Inject template(optional) ==> Target HTML
+
+### Scripts
+
+- Javascript/JSX  == Browserify ==> Babel(optional) ==> Target Javascript
+
+### StyleSheets
+
+- Css/Sass/Less == Compile ==> AutoPrefixer(Optional) ==> Target Css
+
+### Assets/Libraries
+
+- Files == Copy ==> Target Files   
+- Files == Concat ==> Target Files
+
+### Live Building/Watching 
+
+- Javascript/JSX == Watchify ==> Rebuild ==> Target Javascript
+- Files == Module: Watch ==> Rebuild ==> Target Files 
+- After rebuild == BrowserSync(Optional) ==> Reload Browser
+
+## Tips
+
+### React JSX Project
+
+Add followed codes into your `package.json`
+
+``` js
+{
+	// ...
+	"browserify": {
+		"transform": [ 
+			[ "babelify", { "presets": [ "react" ] } ]
+		]
+	}
+	// ...
+}
+```
 
 ## TODO
 
