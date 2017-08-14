@@ -1,7 +1,7 @@
 /**
  * frontend build scripts
- * version: 0.6.0
- * date: 2017-08-14 01:28
+ * version: 0.6.1
+ * date: 2017-08-15 06:29
  */
 
 //@ts-check

@@ -2,8 +2,8 @@
 
 /**
  * frontend build scripts
- * version: 0.6.0
- * date: 2017-08-14 01:28
+ * version: 0.6.1
+ * date: 2017-08-15 06:29
  */
 
 //@ts-check
@@ -276,7 +276,7 @@ function browserifyAndBabel(from, to, _then) {
 		let code = String(buffer);	
 		let map = null;
 		if (isSourceMapOn) {
-			JSON.parse(sourceMapConvert.fromSource(code).toJSON());
+			map = JSON.parse(sourceMapConvert.fromSource(code).toJSON());
 			code = sourceMapConvert.removeMapFileComments(code);
 		}
 		if (processorConfig.babel.enable) {
