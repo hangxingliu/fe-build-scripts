@@ -20,3 +20,6 @@
 - [ ] support analyze build scripts dependencies from config and babelrc
 - [ ] support pass source file system structure into ejs/pug variables
 - [ ] support add browserify plugins
+- [ ] support parallel building
+	- [ ] average each scripts building to independent process to improve speed
+- [ ] support multi-config for building scripts
