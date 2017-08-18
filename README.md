@@ -43,6 +43,11 @@
 - Files == Module: Watch ==> Rebuild ==> Target Files 
 - After rebuild == BrowserSync(Optional) ==> Reload Browser
 
+### Automatically Rename
+
+- `jsx` => `js`
+- `sass`/`scss` => `css`
+
 ## Tips
 
 ### React JSX Project

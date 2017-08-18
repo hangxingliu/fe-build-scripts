@@ -8,13 +8,14 @@ src:
         - "*.html"
         - "pages/*.html"
     scripts:
-        - "scripts/index.js"
+        - "scripts/index.jsx"
     concat:
         "scripts/libs.js":
             - "libs/test1.js"
             - "libs/test2.js"
     styles:
         - "styles/*.scss"
+        - "styles/*.sass"
         - "styles/*.css"
 dist: 
     base: dist

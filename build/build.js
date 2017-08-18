@@ -2,8 +2,8 @@
 
 /**
  * frontend build scripts
- * version: 0.6.1
- * date: 2017-08-15 06:29
+ * version: 0.6.2
+ * date: 2017-08-19 02:58
  */
 
 //@ts-check
@@ -249,7 +249,8 @@ function handlerScripts(callback) {
 	let log = start('handler scripts');
 	let { src, dist } = config,	
 		files = globFiles(config.src_script_globs, { cwd: src });
-	Async.map(files, (name, cb) => browserifyAndBabel(joinPath(src, name), joinPath(dist, name), cb),
+	Async.map(files, (name, cb) =>
+		browserifyAndBabel(joinPath(src, name), joinPath(dist, getTargetFileName(name)), cb),
 		() => (log.done(), callback && callback()));
 }
 function browserifyAndBabel(from, to, _then) {
@@ -316,13 +317,14 @@ function handlerStyles(callback) {
 	let log = start('handler styles');
 	let { src, dist } = config,
 		files = globFiles(config.src_styles_globs, { cwd: src });
-	Async.map(files, (name, cb) => handlerSassLessAndCss(joinPath(src, name), joinPath(dist, name), cb),	
+	Async.map(files, (name, cb) =>
+		handlerSassLessAndCss(joinPath(src, name), joinPath(dist, getTargetFileName(name) ), cb),	
 		() => (log.done(), callback && callback()));
 }
 function handlerSassLessAndCss(from, to, then) {
 	if (from.endsWith('less')) throw new Error('TODO: support less');
 	if (from.endsWith('.sass') || from.endsWith('.scss'))
-		return handlerSass(from, to.replace(/\.s[ca]ss$/, '.css'), to.endsWith('.sass'), then);
+		return handlerSass(from, to, from.endsWith('.sass'), then);
 	if (from.endsWith('.css'))
 		return fs.copy(from, to, err => (err && console.error(`  error: copy css file: ${from}`)) + then());
 	console.error(`  warning: unknown style file format: ${from}`);
@@ -340,9 +342,9 @@ function handlerSass(from, to, indented, then){
 		sourceMap: isSourceMapOn ? SourcesMapTo : void 0
 	}, (err, result) => {
 		if (err) return console.error(`  error: sass compile ${styleName}`.red, '\n', err), then();
-		postcss(autoprefixer?[autoprefixer]:[]).process(result.css, {
+		postcss(autoprefixer ? [autoprefixer] : []).process(result.css, {
 			from: styleName,
-			to: styleName.replace(/\.scss$/, '.css'),
+			to: basename(to),
 			map: isSourceMapOn ? { inline: false, prev: JSON.parse(result.map) } : void 0
 		}).then(result => {
 			let ws = result.warnings();
@@ -359,6 +361,11 @@ function handlerSass(from, to, indented, then){
 		})
 	});
 }		
+
+function getTargetFileName(fileName = '') {
+	if (fileName.endsWith('.jsx')) return fileName.replace(/\.jsx$/, '.js');
+	return fileName.replace(/\.s[ca]ss$/, '.css');
+}
 
 function watchSources() {
 	if (processorConfig.browser_sync.enable){
