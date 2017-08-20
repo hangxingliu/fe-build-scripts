@@ -2,14 +2,7 @@
 /// <reference path="./type.d.ts" />
 
 //@version-info-start
-/**
- * @license Apache-2.0
- *
- * frontend build scripts
- * version: 0.6.2
- * date: 2017-08-19 02:58
- */
-const VERSION = '0.6.2';
+const VERSION = '???';
 //@version-info-end
 
 /*eslint-disable no-console*/
@@ -19,7 +12,6 @@ const CONFIG_FILE = `${__dirname}/build.config.yaml`;
 require('colors');
 
 let fs = require('fs-extra'),
-	glob = require('glob'),
 	yaml = require('js-yaml'),
 	postcss = require('postcss'),
 	browserify = require('browserify'),
@@ -27,6 +19,16 @@ let fs = require('fs-extra'),
 	{ exec } = require('child_process'),
 	Async = require('async'),
 	{ read: loadConfig } = require('./config_reader');
+
+let {
+		globFiles,
+		readFile,
+		writeFileWithMkdirsSync,
+		error, exit, getHelp, startTask,
+		isPugFile,
+		loadYAMLFiles,
+		EMPTY_CALLBACK
+	} = require('./build_utils');
 
 //@processors-declare-start
 let ejs = require('ejs'),
@@ -48,7 +50,6 @@ function loadProcessors(opts) {
 	if (c.sass.enable) sass = require('node-sass');
 	if (c.less.enable) console.log('LESS is TODO...');
 	if (c.autoprefixer.enable) autoprefixer = require('autoprefixer');
-	if (c.browser_sync.enable && opts.watch) browserSync = require('browser-sync');
 	if (c.babel.enable) babel = require('babel-core');
 	if (c.html_minifier.enable) htmlMinifier = require('html-minifier');
 	if (c.ejs.enable) ejs = require('ejs');
@@ -58,44 +59,31 @@ function loadProcessors(opts) {
 	if (opts.watch) {
 		watch = require('watch');
 		watchify = require('watchify');
+
+		if (c.browser_sync.enable) browserSync = require('browser-sync');
 	}
 }
 
-
-//>>>>>>>>> Log functions
-let start = name => {
-	console.log(`# ${name} `.bold + `...`);
-	return {
-		done: () =>console.log(` ${name} done`.green),
-		fail: (err, msg = "") => console.error(` ${name} fail: ${msg}`.red + `\n`, err && (err.stack || err))
-	};
-};
-let log = { e: (err, msg) => { console.error(`  error: ${msg}`.red); err && console.error(err.stack || err) } };
-
 let buildCounter = 0;
+let watchMode = false;
 
 /** @type {ConfigObject} */
 let config = null;
 
-/** @type {ProcessorConfigObject} */
+/** @type {ProcessorsConfig} */
 let processorConfig = null;
 
-/** browserSync Instance */
-let bs = null;
+let bs = null; //browserSync Instance
+let ejsRenderVariables = {};
 
-let _reload = files => { buildCounter++; bs && bs.reload(files) };
 /** @type {ReloadObject} */
 let reload = {};
+let _reload = files => { buildCounter++; bs && bs.reload(files) };
 ['html', 'css', 'js'].map(name => reload[name] = () => _reload(`*.${name}`));
 
-/** 只能调用一次 handlerScripts 因为 脚本 的更新构建 是由 watchify 控制的 */
-let hasCalledHandlerScriptsFunc = false;
-
-const EMPTY_CALLBACK = (...args) => void args;
-
 function main() {
-	let opts = loadLaunchParameters(),
-		exit = sign => process.exit(sign);
+	let opts = loadLaunchParameters();
+	watchMode = opts.watch;
 
 	config = loadConfig(CONFIG_FILE);
 	processorConfig = config.processor;
@@ -109,19 +97,21 @@ function main() {
 		copyAssets() || exit(2);
 		config.concat && config.concat.length && concatFiles(err => err && exit(3));
 	
-		(processorConfig.ejs.enable || processorConfig.ejs_template_tags.enable) && setEjsFileLoader();
+		if (processorConfig.ejs.enable || processorConfig.ejs_template_tags.enable)
+			//@ts-ignore
+			ejs.fileLoader = ejsFileLoader;
 	
-		processorConfig.ejs_variables.enable && (loadEjsVariables() || exit(4));
+		if (processorConfig.ejs_variables.enable) loadEjsVariables() || exit(4);
 
-		let log = start('first build');
+		let task = startTask('first build');
 		Async.parallel([
-			renderPages,
-			handlerScripts,
-			handlerStyles
+			buildPages,
+			buildScripts,
+			buildStyleSheets
 		], (err) => {
-			if (err) return log.fail(err);
+			if (err) return task.fail(err);
 			buildCounter++;
-			execHook('after_build', err => err ? exit(10) : log.done());
+			execHook('after_build', err => err ? exit(10) : task.done());
 		});
 	
 		//opts.watch 是启动参数 watch
@@ -132,69 +122,60 @@ function main() {
 }
 
 function cleanTarget() {
-	let log = start('clean target folder');
-	try { fs.removeSync(config.dist); } catch (err) { return log.fail(err), false; }
-	return log.done(), true;
+	let task = startTask('clean target folder');
+	try { fs.removeSync(config.dist); } catch (err) { return task.fail(err), false; }
+	return task.done(), true;
 }
 function copyAssets() {
-	let log = start(`copy asset files`);
+	let task = startTask(`copy asset files`);
 	console.log(`asset folders: ${config.src_assets.map(v => v.name).join(', ')}`);
 	try {
 		config.src_assets.map(assets => fs.copySync(assets.from, assets.to));
 	} catch (err) {
-		return log.fail(err), false;
+		return task.fail(err), false;
 	}
-	return log.done(), true;
+	return task.done(), true;
 }
 function concatFiles(done = EMPTY_CALLBACK) {
-	let log = start(`concat files`);
+	let task = startTask(`concat files`);
 	Async.map(config.concat, (concat, then) => {
 		console.log(`concatenating file ${concat.name} `);
 		Async.parallel(concat.from.map(from => (readDone => readFile(from, readDone))), (err, contents) => {
 			return err
-				? (console.error(`  error: read source file for concatenating failed!`.red), then(err))
+				? (error(`read source file for concatenating failed!`), then(err))
 				: (writeFileWithMkdirsSync(concat.to, contents.join('\n')), then());
 			// TODO add sources map
 		});
-	}, err => err ? (log.fail(err), done(err)) : (log.done(), done()));
+	}, err => err ? (task.fail(err), done(err)) : (task.done(), done()));
 }
 
 
-//>>>>>>>>>>  EJS/Pug
-function isPugFile(file) { return file.endsWith('.pug') || file.endsWith('.jade'); }
+//====================================
+//
+//    B u i l d      P a g e s
+//
+//====================================
 function getPugOptions(filePath) { return { basedir: config.src, filename: basename(filePath) }; }
-function setEjsFileLoader() {
-	if (!ejs) return;
-	//@ts-ignore
-	ejs.fileLoader = filePath => {
-		if (isPugFile(filePath))
-			return processorConfig.pug.enable ?
-				pug.compileFile(filePath, getPugOptions(filePath))(ejsRenderVariables)
-				: (console.error(`  error: The include file is a pug file. And you had not turn on the pug processor in config file!`.red, '\n',
-					`    ${filePath}`.red), "");
-		if (!fs.existsSync(filePath)) {
-			filePath.endsWith('.ejs') && (filePath = filePath.replace(/\.ejs$/, '.html'));
-			if (!fs.existsSync(filePath))
-				return console.error(`  error: The include page is not existed!`.red, '\n',
-					`    ${filePath}`.red), "";
-		}
-		return fs.readFileSync(filePath, 'utf8');
-	};
-}
-let ejsRenderVariables = {};
 function loadEjsVariables() {
-	let obj = {}, log = start("load ejs variables");
-	config.processor.ejs_variables.files.map(file => {
-		try {
-			let extend = yaml.safeLoad(fs.readFileSync(file, 'utf8'));
-			obj = Object.assign(obj, extend);
-		} catch (err) { return log.fail(err), false; }
-	});
-	ejsRenderVariables = obj
-	return true;
+	let task = startTask("load ejs variables");
+	ejsRenderVariables = loadYAMLFiles(config.processor.ejs_variables.files);
+	if (!ejsRenderVariables) return task.fail(`load ejs variable failed (invalid yaml)`), false;
+	return task.done(), true;
 }
-function renderPages(callback) {
-	let log = start('render pages');
+function ejsFileLoader(filePath) {
+	if (isPugFile(filePath))
+		return processorConfig.pug.enable ?
+			pug.compileFile(filePath, getPugOptions(filePath))(ejsRenderVariables)
+			: (error(`You had not turn on the pug processor in config file!`), "");
+	if (!fs.existsSync(filePath)) {
+		filePath.endsWith('.ejs') && (filePath = filePath.replace(/\.ejs$/, '.html'));
+		if (!fs.existsSync(filePath))
+			return error(`The include page is not existed! (${filePath})`), "";
+	}
+	return readFile(filePath);
+}
+function buildPages(callback) {
+	let task = startTask('render pages');
 	let files = globFiles(config.src_globs, { cwd: config.src });
 	console.log(` pages count: ${files.length}`);
 	Async.map(files, (name, callback) => {
@@ -218,7 +199,7 @@ function renderPages(callback) {
 			callback(null, true);
 		}
 	}, err => {
-		err ? log.fail(err.err, err.path) : log.done();
+		err ? task.fail(err.err, err.path) : task.done();
 		callback && callback(err);
 	});
 }
@@ -250,18 +231,24 @@ function renderEjsTemplateTags(html) {
 	}
 }
 
-//>>>>>>>>>>> handlerScripts
-function handlerScripts(callback) {
-	if (hasCalledHandlerScriptsFunc) 
-		throw `handlerScripts could be only called one time!`;
-	hasCalledHandlerScriptsFunc = true;
+//====================================
+//
+//    B u i l d      S c r i p t s
+//
+//====================================
+/** 只能调用一次 handlerScripts 因为 脚本 的更新构建 是由 watchify 控制的 */
+let hasCalledBuildScriptsFunc = false;
+function buildScripts(callback) {
+	if (hasCalledBuildScriptsFunc) 
+		throw `buildScripts could be only called one time!`;
+	hasCalledBuildScriptsFunc = true;
 
-	let log = start('handler scripts');
+	let task = startTask('handler scripts');
 	let { src, dist } = config,	
 		files = globFiles(config.src_script_globs, { cwd: src });
 	Async.map(files, (name, cb) =>
 		browserifyAndBabel(joinPath(src, name), joinPath(dist, getTargetFileName(name)), cb),
-		() => (log.done(), callback && callback()));
+		() => (task.done(), callback && callback()));
 }
 function browserifyAndBabel(from, to, _then) {
 	let scriptName = basename(to);
@@ -272,8 +259,10 @@ function browserifyAndBabel(from, to, _then) {
 		debug: isSourceMapOn, basedir: dirname(to),
 		cache: {}, packageCache: {} // for watchify
 	});
+	// Loading browserify transform from config
+	processorConfig.browserify.transform.map(({ name, options }) => b.transform(name, options));
 	// Running at watch mode if watchify is not null
-	if (watchify) {
+	if (watchMode) {
 		//@ts-ignore
 		b.plugin(watchify, processorConfig.watchify);
 		b.on('update', () => {
@@ -319,18 +308,22 @@ function babelTransform(babelrcPath, scriptName, codes, inSourcesMap = null) {
 			map: result.map
 		};
 	} catch (err) {
-		return log.e(err, `babel transform ${scriptName}`), { err };
+		return error(`babel transform ${scriptName}`, err), { err };
 	}
 }
 
-//>>>>>>>>>>> handlerStyles
-function handlerStyles(callback) {
-	let log = start('handler styles');
+//====================================
+//
+//    B u i l d      S t y l e S h e e t s
+//
+//====================================
+function buildStyleSheets(callback) {
+	let task = startTask('handler styles');
 	let { src, dist } = config,
 		files = globFiles(config.src_styles_globs, { cwd: src });
 	Async.map(files, (name, cb) =>
 		handlerSassLessAndCss(joinPath(src, name), joinPath(dist, getTargetFileName(name) ), cb),	
-		() => (log.done(), callback && callback()));
+		() => (task.done(), callback && callback()));
 }
 function handlerSassLessAndCss(from, to, then) {
 	if (from.endsWith('less')) throw new Error('TODO: support less');
@@ -367,7 +360,7 @@ function handlerSass(from, to, indented, then){
 			isSourceMapOn && fs.writeFileSync(SourcesMapTo, JSON.stringify(result.map, null, '\t'));
 			then();
 		}).catch(err => {
-			console.error(`  error: auto prefixer ${styleName}`.red, '\n', err);
+			error(`auto prefixer ${styleName}`, err);
 			then();
 		})
 	});
@@ -392,47 +385,25 @@ function watchSources() {
 		let p = String(path);
 		console.log("watch >".bold, p);
 		if (p.endsWith('.yaml'))
-			return loadEjsVariables(), renderPages(reload.html);
-		if (p.endsWith('.html') || p.endsWith('.ejs') || p.endsWith('.pug') || p.endsWith('.jade'))
-			return renderPages(reload.html);
+			return loadEjsVariables(), buildPages(reload.html);
+		if (p.endsWith('.html') || p.endsWith('.ejs') || isPugFile(p))
+			return buildPages(reload.html);
 		if (p.endsWith('.css') || p.endsWith('.sass') ||
 			p.endsWith('.scss') || p.endsWith('.less')) 
-			return handlerStyles(reload.css);
+			return buildStyleSheets(reload.css);
 	});
 }
 
-
-
 function loadLaunchParameters() {
-	let p = process.argv, watch = false;
-	if (isArrayIncludes(p, '-h', '--help')) return printHelp();
-	if (isArrayIncludes(p, '-V', '--version')) return printVersion();
-	if (isArrayIncludes(p, '-w', '--watch')) watch = true;
+	let watch = false;
+	if (hasOption('-h', '--help')) exit(0, getHelp());
+	if (hasOption('-V', '--version')) exit(0, VERSION);
+	if (hasOption('-w', '--watch')) watch = true;
 	return { watch };
-}
-function printHelp() {
-	console.log([
-		`Usage: build.js [options] [configName]\n`,
-		`Version: ${VERSION}`,
-		`Front-end build scripts pack\n`,
-		`Options:`, 
-		`  -V --version  output the version info`,
-		`  -h --help     output this help info`,
-		`  -w --watch    turn on the watch building mode\n`,
-		`ConfigName:`,
-		`  [default]     build.config.yaml`,
-		`  dev           build.dev.config.yaml`,
-		`  prod          build.prod.config.yaml`,
-		`  <fileName>    load config from fileName you given`
-	].map(l=>'  '+l).join('\n'));
-	process.exit(0);
-}
-function printVersion() {
-	console.log(VERSION);
-	process.exit(0);
-}
-function isArrayIncludes(array = [], ...inc) {
-	for (let i of inc) if (array.indexOf(i) >= 0) return true; return false;
+
+	function hasOption(...inc) {
+		for (let i of inc) if (process.argv.indexOf(i) >= 0) return true; return false;
+	}
 }
 
 //>>>>>>>>>>>> Execute Hook
@@ -441,35 +412,15 @@ function execHook(hookName, then = EMPTY_CALLBACK) {
 	if (!hook) return then();
 
 	let { command, asynchronous } = hook,
-		log = start(`hook ${hookName}`);
+		task = startTask(`hook ${hookName}`);
 	exec(`${command} "${buildCounter}"`, { cwd: __dirname, encoding: 'utf8' },
 		(err, stdout, stderr) => {
 			if (stdout) stdout.trim().split('\n').map(line => `hook out: ${line}`).map(line => console.log(line));
 			if (stderr) stderr.trim().split('\n').map(line => `hook err: ${line}`).map(line => console.error(line));
-			err ? log.fail(err, `executing hook script "${hookName}" failed!`) : log.done();
+			err ? task.fail(err, `executing hook script "${hookName}" failed!`) : task.done();
 			if (!asynchronous) err ? then(err) : then();	
 		});
 	if (asynchronous) then();
-}
-//>>>>>>>>>>>> Glob
-function globFiles(globArray, options) {
-	let allFiles = [];
-	globArray.map(globStr => {
-		try {
-			allFiles = allFiles.concat(glob.sync(globStr, options));
-		} catch (err) {
-			console.error(`  error: invalid glob: ${glob}`);
-		}
-	});
-	return allFiles;
-}
-//>>>>>>>>>>>>> ReadFile
-function readFile(path, cb = null) { return cb ? fs.readFile(path, 'utf8', cb) : fs.readFileSync(path, 'utf8'); }
-//>>>>>>>>>>>>> Write file
-function writeFileWithMkdirsSync(path, content) {
-	let dir = dirname(path);
-	fs.existsSync(dir) || fs.mkdirsSync(dir);
-	fs.writeFileSync(path, content);
 }
 
 main();

@@ -16,12 +16,13 @@
 	- [ ] support sources map for concatenated d file
 - [x] support extension name map (now support: .jsx => .js .sass/.scss => .css)
 	- [ ] support custom extension name map
+- [x] support add browserify transform
+	- [ ] support add browserify plugins
 - [ ] support less
 - [ ] support CSS compression
 - [ ] support install build script into project automatically 
 - [ ] support analyze build scripts dependencies from config and babelrc
 - [ ] support pass source file system structure into ejs/pug variables
-- [ ] support add browserify plugins
 - [ ] support parallel building
 	- [ ] average each scripts building to independent process to improve speed
 - [ ] support multi-config for building scripts

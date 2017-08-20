@@ -1,19 +1,14 @@
-
-//@version-info-start
-/**
- * frontend build scripts
- * version: 0.6.2
- * date: 2017-08-19 02:58
- */
-const VERSION = '0.6.2';
-//@version-info-end
-
 //@ts-check
 /// <reference path="type.d.ts" />
 
+//@version-info-start
+const VERSION = '???';
+//@version-info-end
+
 (function () {
 	const DEFAULT = {
-		WATCHIFY: { delay: 100, ignoreWatch: ['**/node_modules/**'], poll: false }
+		WATCHIFY: { delay: 100, ignoreWatch: ['**/node_modules/**'], poll: false },
+		BROWSERIFY: { transform: [] }
 	};
 
 	const VALID_SYNC_HOOKS = ['before_all', 'after_build'];
@@ -21,6 +16,23 @@ const VERSION = '0.6.2';
 
 	const VALID_ASYNC_HOOKS = VALID_SYNC_HOOKS.map(name => HOOK_ASYNC_PREFIX + name);
 	const VALID_HOOKS = [].concat(VALID_ASYNC_HOOKS, VALID_SYNC_HOOKS);
+
+	const is = {
+		null: obj => !obj && typeof obj == 'object',
+		object: obj => obj && typeof obj == 'object',
+		string: obj => typeof obj == 'string',
+		boolean: obj => typeof obj == 'boolean',
+		array: obj => Array.isArray(obj),
+
+		stringOrStringArray: obj => is.string(obj) || is.stringArray(obj) ,
+		stringArray: obj => {
+			if (!Array.isArray(obj)) return false;
+			for (let it of obj) if (typeof it != 'string') return false;
+			return true;
+		},
+		objectHasEnableField: obj => is.object(obj) && is.boolean(obj.enable)
+	};
+	const eachItem = (obj, it) => Object.keys(obj).map(key => it(key, obj[key]));
 
 	let yaml = require('js-yaml'),
 		{ readFileSync } = require('fs-extra'),
@@ -34,47 +46,32 @@ const VERSION = '0.6.2';
 		let configStr = readFileSync(filePath, 'utf8'),
 			config = yaml.safeLoad(configStr);
 		
-		if (!isString(config.name))
-			throw incompleteError(`config.name`, 'String');
+		// Basic framework
+		is.string(config.name) || throwNotAStringError(`name`);
+		is.object(config.src) || throwNotAnObjectError(`src`);
+		is.object(config.dist) || throwNotAnObjectError(`dist`);
 		
-		if (!isObject(config.src))
-			throw incompleteError(`config.src`, 'Object');
-		if (!isString(config.src.base))
-			throw incompleteError(`config.src.base`, 'String');
-		
-		if (isNull(config.src.scripts)) config.src.scripts = [];
-		if (isNull(config.src.styles)) config.src.styles = [];
-		if (!isStringOrStringArray(config.src.scripts))
-			throw incompleteError(`config.src.scripts`, 'String/String[]');
-		if (!isStringOrStringArray(config.src.styles))
-			throw incompleteError(`config.src.styles`, 'String/String[]');
-		
-		if (isObject(config.src.concat))
-			Object.keys(config.src.concat).map(key => {
-				if (!isStringArray(config.src.concat[key]))
-					throw incompleteError(`config.src.concat["${key}"]`, 'string[]');
-			});
-		
-		if (isObject(config.hook))
-			Object.keys(config.hook).map(hookName => {
-				if (VALID_HOOKS.indexOf(hookName) < 0) throw incompleteError(`config.hook["${hookName}"]`, `valid hook event name`);
-				if (!isString(config.hook[hookName]))
-					throw incompleteError(`config.hook["${hookName}"]`, `string`);
-			})
+		// default value
+		if (is.null(config.src.scripts)) config.src.scripts = [];
+		if (is.null(config.src.styles)) config.src.styles = [];
+		if (is.null(config.src.assets)) config.src.assets = [];
+		if (is.null(config.src.pages)) config.src.pages = [];
+		if (is.null(config.src.concat)) config.src.concat = {};
+		if (is.null(config.hook)) config.src.hook = {};
 
-		if (isNull(config.src.assets)) config.src.assets = [];
-		if (isNull(config.src.pages)) config.src.pages = [];
-		if (!isStringOrStringArray(config.src.assets))
-			throw incompleteError(`config.src.assets`, 'String/String[]');
-		if (!isStringOrStringArray(config.src.pages))
-			throw incompleteError(`config.src.pages`, 'String/String[]');
-
-		if (!isObject(config.dist))
-			throw incompleteError(`config.dist`, 'Object');
-		if (!isString(config.dist.base))
-			throw incompleteError(`config.dist.base`, 'String');
-		if (!isBoolean(config.dist.clean))
-			throw incompleteError(`config.dist.clean`, 'Boolean');
+		is.string(config.src.base) || throwNotAStringError(`src.base`);
+		is.stringOrStringArray(config.src.scripts) || throwNotAStringOrStringArrayError(`src.scripts`);
+		is.stringOrStringArray(config.src.styles) || throwNotAStringOrStringArrayError(`src.styles`);
+		is.stringOrStringArray(config.src.assets) || throwNotAStringOrStringArrayError(`src.assets`);
+		is.stringOrStringArray(config.src.pages) || throwNotAStringOrStringArrayError(`src.pages`);
+		
+		eachItem(config.src.concat, (k, v) => is.stringArray(v) || throwNotAStringArrayError(`src.concat["${k}"]`));
+		eachItem(config.hook, (k) => VALID_HOOKS.indexOf(k) >= 0 || throwNotAValidHookNameError(`hook["${k}"]`));
+		eachItem(config.hook, (k, v) => is.string(v) || throwNotAStringError(`hook["${k}"]`));
+	
+		// dist
+		is.string(config.dist.base) || throwNotAStringError(`dist.base`);
+		is.boolean(config.dist.clean) || throwNotABooleanError(`dist.clean`);
 
 		let basePath = process.cwd(),
 			distBasePath = joinPath(basePath, config.dist.base),
@@ -92,16 +89,16 @@ const VERSION = '0.6.2';
 		result.clean_dist = !!config.dist.clean;
 
 		let assetsConfig = config.src.assets;
-		result.src_assets = (isString(assetsConfig) ? [assetsConfig] : assetsConfig)
+		result.src_assets = (is.string(assetsConfig) ? [assetsConfig] : assetsConfig)
 			.map(path => ({ name: path, from: joinPath(srcBasePath, path), to: joinPath(distBasePath, path) }));
 		
 		let pagesConfig = config.src.pages;
-		result.src_globs = (isString(pagesConfig) ? [pagesConfig] : pagesConfig);
+		result.src_globs = (is.string(pagesConfig) ? [pagesConfig] : pagesConfig);
 		
 		let scriptsConfig = config.src.scripts;
-		result.src_script_globs = (isString(scriptsConfig) ? [scriptsConfig] : scriptsConfig);
+		result.src_script_globs = (is.string(scriptsConfig) ? [scriptsConfig] : scriptsConfig);
 		let stylesConfig = config.src.styles;
-		result.src_styles_globs = (isString(stylesConfig) ? [stylesConfig] : stylesConfig);
+		result.src_styles_globs = (is.string(stylesConfig) ? [stylesConfig] : stylesConfig);
 		
 		let concatConfig = config.src.concat || {};
 		result.concat = Object.keys(concatConfig).map(distFileName => ({
@@ -121,62 +118,55 @@ const VERSION = '0.6.2';
 		result.hook = hookResult;
 
 		/**
-		 * @type {ProcessorConfigObject}
+		 * @type {ProcessorsConfig}
 		 */
 		//@ts-ignore
 		let processor = {};
 		let configProcessor = config.processor || {};
 		
-		processor.sass = { enable: !!configProcessor.sass };
-		processor.less = { enable: !!configProcessor.less };
-		processor.autoprefixer = { enable: !!configProcessor.autoprefixer };
-		processor.ejs = { enable: !!configProcessor.ejs };
-		processor.pug = { enable: !!configProcessor.pug };
-
 		processor.watchify = Object.assign({}, DEFAULT.WATCHIFY, configProcessor.watchify || {});
-		if (processor.watchify.enable === false)
-			throw incompleteError(`processor.watchify.enable`, 'true/undefined');
-		delete processor.watchify.enable;
 
-		processor.source_map = isObjectHasEnableField(configProcessor.source_map)
-			? configProcessor.source_map
-			: { enable: !!configProcessor.source_map };
-		processor.html_minifier = isObjectHasEnableField(configProcessor.html_minifier)
-			? configProcessor.html_minifier
-			: { enable: !!configProcessor.html_minifier };
-		processor.browser_sync = isObjectHasEnableField(configProcessor.browser_sync)
-			? configProcessor.browser_sync
-			:{ enable: !!configProcessor.browser_sync };
-		processor.babel = isObjectHasEnableField(configProcessor.babel)
-			? configProcessor.babel
-			:{ enable: !!configProcessor.babel };
-		processor.ejs_variables =
-			isObjectHasEnableField(configProcessor.ejs_variables)
-				? configProcessor.ejs_variables
-				: { enable: !!configProcessor.ejs_variables };
-		processor.ejs_template_tags = isObjectHasEnableField(configProcessor.ejs_template_tags)
-			? configProcessor.ejs_template_tags
-			: { enable: !!configProcessor.ejs_template_tags };
-			
+		processor.browserify = configProcessor.browserify || DEFAULT.BROWSERIFY;
+		let { transform } = processor.browserify;
+		is.array(transform) || throwNotAnArrayError('processor.browserify.transform');
+		processor.browserify.transform = transform.map(trans => is.string(trans) ? { name: String(trans) } : trans);
+
+		['watchify', 'browserify']
+			.map(name => processor[name].enable === false ? throwDoNotFalseError(`processor.${name}.enable`) : name)
+			.map(name => delete processor[String(name)].enable);
+
+		[
+			'sass', 'less', 'autoprefixer',
+			'ejs', 'ejs_variables', 'ejs_template_tags',
+			'pug', 'html_minifier',
+			'babel', 'source_map',
+			'browser_sync',
+		].map(name => ({ name, config: configProcessor[name] }))
+			.map(({ name, config }) =>
+				processor[name] = is.objectHasEnableField(config) ? config : { enable: !!config });
+
+		
 		result.processor = processor;
 		return result;
 	
 	}
 	
-	function isNull(obj) { return !obj && typeof obj == 'object'; }
-	function isObject(obj) { return obj && typeof obj == 'object'; }
-	function isString(obj) { return typeof obj == 'string'; }
-	function isBoolean(obj) { return typeof obj == 'boolean'; }
-	function isStringArray(obj) { 
-		if (!Array.isArray(obj)) return false;
-		for (let it of obj) if (typeof it != 'string') return false;
-		return true;
-	}
-	function isStringOrStringArray(obj) { return isString(obj) || isStringArray(obj); }
+
+	function throwNotAStringError(name) { throw incompleteError(name, 'String'); }
+	function throwNotAnObjectError(name) { throw incompleteError(name, 'Object'); }
+	function throwNotABooleanError(name) { throw incompleteError(name, 'Boolean'); }
+	function throwNotAStringArrayError(name) { throw incompleteError(name, 'String[]'); }
+	function throwNotAnArrayError(name) { throw incompleteError(name, 'Any[]'); }
+	
+	function throwNotAStringOrStringArrayError(name) { throw incompleteError(name, 'String/String[]'); }
+	
+	function throwNotAValidHookNameError(name) { throw incompleteError(name, 'Hook Name Sting'); }
+	function throwDoNotFalseError(name) { throw incompleteError(name, 'True/Undefined (Not allow false)'); }
+
 	function incompleteError(name, type) {
-		return new Error(`Config is incomplete. "${name}" is not a ${type}!`);
+		return new Error(`Config is incomplete. "config.${name}" is not a ${type}!`);
 	}
-	function isObjectHasEnableField(obj) { return isObject(obj) && isBoolean(obj.enable); }
+	
 	
 	module.exports = { read: reader };
 })();

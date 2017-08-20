@@ -1,5 +1,3 @@
 let content = "";
-module.exports = {
-	get: () => content,
-	set: ct => content = ct
-};
+export function get() { return content }
+export function set(ct) { content = ct }

@@ -20,7 +20,7 @@ const versionInfo = `
 const VERSION = '${version}';
 `;
 
-const FILES_MAP = ['build.js', 'config_reader.js'];
+const FILES_MAP = ['build.js', 'build_utils.js', 'config_reader.js'];
 const FROM = 'src';
 const TO = 'build';
 const FILES_FROM = FILES_MAP.map(fname => path.join(FROM, fname));
@@ -40,13 +40,15 @@ function watch() {
 	require('watch').watchTree(FROM, { interval: 0.5 }, function (f, curr, prev) {
 		if (typeof f == "object" && prev === null && curr === null)
 			return build(); // first build
-		return build(f && FILES_FROM.indexOf(String(f)) >= 0 ? [f] : null);
+		return f ? build(f) : build();
 	})
 }
 
-function build(files = null) {
-	(files || FILES_FROM).map((from, i) =>
-		fs.readFile(from, 'utf8', ioCallback(buildEach, from, FILES_TO[i])));
+function build(file = null) {
+	FILES_FROM.map((from, i) => {
+		if (file && (file != from)) return;
+		fs.readFile(from, 'utf8', ioCallback(buildEach, from, FILES_TO[i]))
+	});
 }
 
 function buildEach(content = '', from = '', to = '') {

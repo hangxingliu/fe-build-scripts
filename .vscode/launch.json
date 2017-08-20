@@ -8,7 +8,8 @@
 			"type": "node",
 			"request": "launch",
 			"name": "Test config_reader",
-			"program": "${workspaceRoot}/test/config_reader.js"
+			"program": "${workspaceRoot}/src/build.js",
+			"cwd": "${workspaceRoot}/test/env"
 		}
 	]
 }

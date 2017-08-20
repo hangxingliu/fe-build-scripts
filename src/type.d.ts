@@ -17,7 +17,7 @@ type ConfigObject = {
 	
 	watch: string[]|false;
 
-	processor: ProcessorConfigObject;
+	processor: ProcessorsConfig;
 };
 type FromToObject = {
 	name: string;
@@ -35,28 +35,28 @@ type HookScriptObject = {
 	asynchronous: boolean;
 };
 
-type ProcessorConfigObject = {
-	source_map: BaseConfigProcessorObject & SourceMapProcessorExtend;
-	watchify: BaseConfigProcessorObject & WatchifyProcessorExtend;
-	sass: BaseConfigProcessorObject;
-	less: BaseConfigProcessorObject;
-	autoprefixer: BaseConfigProcessorObject;
-	ejs: BaseConfigProcessorObject;
-	pug: BaseConfigProcessorObject;
-	browser_sync: BaseConfigProcessorObject;
-	babel: BaseConfigProcessorObject & BabelProcessorExtend;
-	html_minifier: BaseConfigProcessorObject & HtmlMinifierProcessorExtend;
-	ejs_variables: BaseConfigProcessorObject & EjsVariablesProcessorExtend;
-	ejs_template_tags: BaseConfigProcessorObject & EjsTemplateTagsProcessorExtend;
+type ProcessorsConfig = {
+	source_map: ProcessorConfig & SourceMapExtend;
+	watchify: ProcessorConfig & WatchifyProcessorExtend;
+	browserify: ProcessorConfig & BrowserifyExtend;
+	sass: ProcessorConfig;
+	less: ProcessorConfig;
+	ejs: ProcessorConfig;
+	pug: ProcessorConfig;
+	autoprefixer: ProcessorConfig;
+	browser_sync: ProcessorConfig;
+	babel: ProcessorConfig & BabelProcessorExtend;
+	html_minifier: ProcessorConfig & HtmlMinifierProcessorExtend;
+	ejs_variables: ProcessorConfig & EjsVariablesProcessorExtend;
+	ejs_template_tags: ProcessorConfig & EjsTemplateTagsProcessorExtend;
 }
 
-type BaseConfigProcessorObject = {
-	enable: boolean;
-};
-type SourceMapProcessorExtend = {
-	js: boolean;
-	css: boolean;
-};
+type ProcessorConfig = { enable: boolean };
+
+type BrowserifyExtend = { transform: BrowserifyTransformObject[] };
+type BrowserifyTransformObject = { name: string, options?: any };
+type SourceMapExtend = { js: boolean; css: boolean; };
+
 type WatchifyProcessorExtend = {
 	delay: number;
 	ignoreWatch: string[];
@@ -66,12 +66,6 @@ type HtmlMinifierProcessorExtend = {
 	removeComments: boolean,
 	collapseWhitespace: boolean
 };
-type BabelProcessorExtend = {
-	babelrc: string;
-};
-type EjsTemplateTagsProcessorExtend = {
-	selector: string;
-};
-type EjsVariablesProcessorExtend = {
-	files: string[];
-};
+type BabelProcessorExtend = { babelrc: string };
+type EjsTemplateTagsProcessorExtend = { selector: string };
+type EjsVariablesProcessorExtend = { files: string[] };
