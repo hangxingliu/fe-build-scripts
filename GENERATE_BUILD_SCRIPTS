@@ -1,0 +1,114 @@
+#!/usr/bin/env node
+
+//@ts-check
+let fs = require('fs'),
+	path = require('path'),
+	babel = require('babel-core');
+
+const now = getNowDateTimeString();
+const license = getPackageLicense();
+const version = getPackageVersion();
+
+const versionInfo = `
+/**
+ * @license ${license}
+ * 
+ * frontend build scripts
+ * version: ${version}
+ * date: ${now}
+ */
+const VERSION = '${version}';
+`;
+
+const FILES_MAP = ['build.js', 'config_reader.js'];
+const FROM = 'src';
+const TO = 'build';
+const FILES_FROM = FILES_MAP.map(fname => path.join(FROM, fname));
+const FILES_TO = FILES_MAP.map(fname => path.join(TO, fname));
+
+
+console.log(`  version:   ${version}\n  dateTime:  ${now}\n  =======================`);
+
+if (process.argv.indexOf('-w') >= 0 || process.argv.indexOf('--watch') >= 0) {
+	watch();
+} else {
+	console.log('\n  tip: using option "-w" or "--watch" to building live\n')
+	build();
+}
+
+function watch() {
+	require('watch').watchTree(FROM, { interval: 0.5 }, function (f, curr, prev) {
+		if (typeof f == "object" && prev === null && curr === null)
+			return build(); // first build
+		return build(f && FILES_FROM.indexOf(String(f)) >= 0 ? [f] : null);
+	})
+}
+
+function build(files = null) {
+	(files || FILES_FROM).map((from, i) =>
+		fs.readFile(from, 'utf8', ioCallback(buildEach, from, FILES_TO[i])));
+}
+
+function buildEach(content = '', from = '', to = '') {
+	let lines = content.split('\n'), newLines = [];
+	let inVersionInfo = false, inProcessors = false;
+	newLines.push('#!/usr/bin/env node\n');
+	for (let line of lines) {
+		let match = line.match(/^\s*\/\/@(\w+)\-(\w+)\-(\w+)\s*$/);
+		if (match) {
+			if (match[1] == 'version') {
+				if (match[3] == 'start') {
+					inVersionInfo = true;
+					newLines.push(versionInfo);				
+				} else {
+					inVersionInfo = false;
+				}
+			} else if (match[1] == 'processors') {
+				inProcessors = match[3] == 'start';
+			}
+			continue;
+		}
+		if (inVersionInfo) continue;
+		newLines.push(inProcessors ? line.replace(/require\(.+\)/, 'null') : line);
+	}
+	try {
+		let scripts = babel.transform(newLines.join('\n'), {
+			presets: [
+				['minify', {
+					mangle: {
+						topLevel: true
+					}
+				}]
+			],
+			retainLines: true,
+			//@ts-ignore
+			minified: false,
+			comments: false
+		}).code;
+		scripts = scripts.split('\n')
+			.filter(notEmpty => notEmpty)
+			.join('\n');
+		fs.writeFileSync(to, scripts);
+		console.log(`  done: ${to}`)
+	} catch (ex) {
+		console.error(`  failed: ${ex.message}`);
+		console.error((ex.stack || 'Expectation stack info is empty!').split('\n').map(line => `  ${line}`).join('\n'));
+	}
+}
+
+function ioCallback(callback, ...p) { 
+	return (err, ...result) => err
+	? (console.error(err.stack || err), process.exit(1))
+	: callback(...result, ...p);
+}
+
+//@ts-ignore
+function getPackageVersion() { return require('./package.json').version; }
+//@ts-ignore
+function getPackageLicense() { return require('./package.json').license; }
+function getNowDateTimeString() {
+	let date = new Date();
+	return `${date.getFullYear()}-${to2(date.getMonth() + 1)}-${to2(date.getDate())}` +
+		` ${to2(date.getHours())}:${to2(date.getMinutes())}`;
+}
+function to2(num = 0) { return num >= 10 ? `${num}` : (num > 0 ? `0${num}` : `00`); }

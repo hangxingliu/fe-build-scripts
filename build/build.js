@@ -1,442 +1,345 @@
 #!/usr/bin/env node
-
 /**
+ * @license Apache-2.0
+ * 
  * frontend build scripts
  * version: 0.6.2
- * date: 2017-08-19 02:58
+ * date: 2017-08-21 02:53
  */
-
-//@ts-check
-/// <reference path="type.d.ts" />
-
-/*eslint-disable no-console*/
-
-const CONFIG_FILE = `${__dirname}/build.config.yaml`;
-
+const a = '0.6.2',
+b = `${__dirname}/build.config.yaml`;
 require('colors');
-
-let fs = require('fs-extra'),
-	Options = require('commander'),
-	glob = require('glob'),
-	yaml = require('js-yaml'),
-	postcss = require('postcss'),
-	browserify = require('browserify'),
-	{ join: joinPath, dirname, basename, isAbsolute } = require('path'),
-	{ exec } = require('child_process'),
-	Async = require('async'),
-	{ read: loadConfig } = require('./config_reader');
-	
-//>>>>>>>>> Processor
-let ejs = null, //require('ejs'),
-	pug = null, //require('pug'),	
-	babel = null, //require('babel-core'),
-	sass = null, //require('node-sass'),
-	autoprefixer = null, //require('autoprefixer'),
-	cheerio = null, //require('cheerio'),
-	htmlMinifier = null, //require('html-minifier'),
-	browserSync = null, // require('browser-sync'),
-	watch = null, //require('watch');
-	watchify = null, //require('watchify');
-	sourceMapConvert = null //require('convert-source-map');
-	;
-
-function loadProcessors(opts) {
-	let c = processorConfig;
-	if (c.source_map.enable && c.source_map.js) sourceMapConvert = require('convert-source-map');
-	if (c.sass.enable) sass = require('node-sass');
-	if (c.less.enable) console.log('LESS is TODO...');
-	if (c.autoprefixer.enable) autoprefixer = require('autoprefixer');
-	if (c.browser_sync.enable && opts.watch) browserSync = require('browser-sync');
-	if (c.babel.enable) babel = require('babel-core');
-	if (c.html_minifier.enable) htmlMinifier = require('html-minifier');
-	if (c.ejs.enable) ejs = require('ejs');
-	if (c.ejs_template_tags.enable) cheerio = require('cheerio');
-	if (c.pug.enable) pug = require('pug');
-
-	if (opts.watch) {
-		watch = require('watch');
-		watchify = require('watchify');
-	}
+let c = require('fs-extra'),
+d = require('glob'),
+e = require('js-yaml'),
+f = require('postcss'),
+g = require('browserify'),
+{ join: h, dirname: i, basename: j, isAbsolute: k } = require('path'),
+{ exec: l } = require('child_process'),
+m = require('async'),
+{ read: n } = require('./config_reader'),
+o = null,
+p = null,
+q = null,
+r = null,
+s = null,
+t = null,
+u = null,
+v = null,
+w = null,
+x = null,
+y = null;
+function z(a) {
+	let b = E;
+	b.source_map.enable && b.source_map.js && (y = require('convert-source-map')),
+	b.sass.enable && (r = require('node-sass')),
+	b.less.enable && console.log('LESS is TODO...'),
+	b.autoprefixer.enable && (s = require('autoprefixer')),
+	b.browser_sync.enable && a.watch && (v = require('browser-sync')),
+	b.babel.enable && (q = require('babel-core')),
+	b.html_minifier.enable && (u = require('html-minifier')),
+	b.ejs.enable && (o = require('ejs')),
+	b.ejs_template_tags.enable && (t = require('cheerio')),
+	b.pug.enable && (p = require('pug')),
+	a.watch && (
+	w = require('watch'),
+	x = require('watchify'));
 }
-
-
-//>>>>>>>>> Log functions
-let start = name => {
-	console.log(`# ${name} `.bold + `...`);
-	return {
-		done: () =>console.log(` ${name} done`.green),
-		fail: (err, msg = "") => console.error(` ${name} fail: ${msg}`.red + `\n`, err && (err.stack || err))
-	};
-};
-
-let buildCounter = 0;
-
-/** @type {ConfigObject} */
-let config = null;
-
-/** @type {ProcessorConfigObject} */
-let processorConfig = null;
-
-/** browserSync Instance */
-let bs = null;
-
-/** 只能调用一次 handlerScripts 因为 脚本 的更新构建 是由 watchify 控制的 */
-let hasCalledHandlerScriptsFunc = false;
-
-const EMPTY_CALLBACK = (...args) => void args;
-
-function main() {
-	let opts = loadLaunchParameters(),
-		exit = sign => process.exit(sign);
-
-	config = loadConfig(CONFIG_FILE);
-	processorConfig = config.processor;
-	//加载相应的插件
-	loadProcessors(opts);
-
-	execHook('before_all', err => {
-		if (err) return exit(11);
-
-		config.clean_dist && (cleanTarget() || exit(1));
-		copyAssets() || exit(2);
-		config.concat && config.concat.length && concatFiles(err => err && exit(3));
-	
-		(processorConfig.ejs.enable || processorConfig.ejs_template_tags.enable) && setEjsFileLoader();
-	
-		processorConfig.ejs_variables.enable && (loadEjsVariables() || exit(4));
-
-		let log = start('first build');
-		Async.parallel([
-			renderPages,
-			handlerScripts,
-			handlerStyles
-		], (err) => {
-			if (err) return log.fail(err);
-			buildCounter++;
-			execHook('after_build', err => err ? exit(10) : log.done());
-		});
-	
-		//opts.watch 是启动参数 watch
-		//@ts-ignore
-		opts.watch ? (console.log("# Watch mode is on".bold), watchSources())
-			: console.log("  Tip: -w option could turn on the watch mode".grey);
+let A = (a) => (
+console.log(`# ${a} `.bold + `...`),
+{
+	done: () => console.log(` ${a} done`.green),
+	fail: (b, c = "") => console.error(` ${a} fail: ${c}`.red + `\n`, b && (b.stack || b)) }),
+B = { e: (a, b) => {console.error(`  error: ${b}`.red), a && console.error(a.stack || a);} },
+C = 0,
+D = null,
+E = null,
+F = null,
+G = (a) => {C++, F && F.reload(a);},
+H = {};
+['html', 'css', 'js'].map((a) => H[a] = () => G(`*.${a}`));
+let I = !1;
+const J = (...a) => void a;
+function K() {
+	let a = da(),
+	c = (a) => process.exit(a);
+	D = n(b),
+	E = D.processor,
+	z(a),
+	ha('before_all', (b) => {
+		if (b) return c(11);
+		D.clean_dist && (L() || c(1)),
+		M() || c(2),
+		D.concat && D.concat.length && N((a) => a && c(3)),
+		(E.ejs.enable || E.ejs_template_tags.enable) && Q(),
+		E.ejs_variables.enable && (S() || c(4));
+		let d = A('first build');
+		m.parallel([T, W, $],
+		(a) => a ?
+		d.fail(a) : void (
+		C++,
+		ha('after_build', (a) => a ? c(10) : d.done()))),
+		a.watch ? (console.log("# Watch mode is on".bold), ca()) :
+		console.log("  Tip: -w option could turn on the watch mode".grey);
 	});
 }
-
-function cleanTarget() {
-	let log = start('clean target folder');
-	try { fs.removeSync(config.dist); } catch (err) { return log.fail(err), false; }
-	return log.done(), true;
+function L() {
+	let a = A('clean target folder');
+	try {c.removeSync(D.dist);} catch (b) {return a.fail(b), !1;}
+	return a.done(), !0;
 }
-function copyAssets() {
-	let log = start(`copy asset files`);
-	console.log(`asset folders: ${config.src_assets.map(v => v.name).join(', ')}`);
+function M() {
+	let a = A(`copy asset files`);
+	console.log(`asset folders: ${D.src_assets.map((a) => a.name).join(', ')}`);
 	try {
-		config.src_assets.map(assets => fs.copySync(assets.from, assets.to));
-	} catch (err) {
-		return log.fail(err), false;
+		D.src_assets.map((a) => c.copySync(a.from, a.to));
+	} catch (b) {
+		return a.fail(b), !1;
 	}
-	return log.done(), true;
+	return a.done(), !0;
 }
-function concatFiles(done = EMPTY_CALLBACK) {
-	let log = start(`concat files`);
-	Async.map(config.concat, (concat, then) => {
-		console.log(`concatenating file ${concat.name} `);
-		Async.parallel(concat.from.map(from => (readDone => readFile(from, readDone))), (err, contents) => {
-			return err
-				? (console.error(`  error: read source file for concatenating failed!`.red), then(err))
-				: (writeFileWithMkdirsSync(concat.to, contents.join('\n')), then());
-			// TODO add sources map
-		});
-	}, err => err ? (log.fail(err), done(err)) : (log.done(), done()));
+function N(a = J) {
+	let b = A(`concat files`);
+	m.map(D.concat, (a, b) => {
+		console.log(`concatenating file ${a.name} `),
+		m.parallel(a.from.map((a) => (b) => ja(a, b)), (c, d) =>
+		c ? (
+		console.error(`  error: read source file for concatenating failed!`.red), b(c)) : (
+		ka(a.to, d.join('\n')), b()));
+	}, (c) => c ? (b.fail(c), a(c)) : (b.done(), a()));
 }
-
-
-//>>>>>>>>>>  EJS/Pug
-function isPugFile(file) { return file.endsWith('.pug') || file.endsWith('.jade'); }
-function getPugOptions(filePath) { return { basedir: config.src, filename: basename(filePath) }; }
-function setEjsFileLoader() {
-	if (!ejs) return;
-	ejs.fileLoader = filePath => {
-		if (isPugFile(filePath))
-			return processorConfig.pug.enable ?
-				pug.compileFile(filePath, getPugOptions(filePath))(ejsRenderVariables)
-				: (console.error(`  error: The include file is a pug file. And you had not turn on the pug processor in config file!`.red, '\n',
-					`    ${filePath}`.red), "");
-		if (!fs.existsSync(filePath)) {
-			filePath.endsWith('.ejs') && (filePath = filePath.replace(/\.ejs$/, '.html'));
-			if (!fs.existsSync(filePath))
-				return console.error(`  error: The include page is not existed!`.red, '\n',
-					`    ${filePath}`.red), "";
-		}
-		return fs.readFileSync(filePath, 'utf8');
-	};
+function O(a) {return a.endsWith('.pug') || a.endsWith('.jade');}
+function P(a) {return { basedir: D.src, filename: j(a) };}
+function Q() {o && (
+	o.fileLoader = (a) =>
+	O(a) ?
+	E.pug.enable ?
+	p.compileFile(a, P(a))(R) : (
+	console.error(`  error: The include file is a pug file. And you had not turn on the pug processor in config file!`.red, '\n',
+	`    ${a}`.red), "") :
+	!c.existsSync(a) && (
+	a.endsWith('.ejs') && (a = a.replace(/\.ejs$/, '.html')),
+	!c.existsSync(a)) ? (
+	console.error(`  error: The include page is not existed!`.red, '\n',
+	`    ${a}`.red), "") :
+	c.readFileSync(a, 'utf8'));
 }
-let ejsRenderVariables = {};
-function loadEjsVariables() {
-	let obj = {}, log = start("load ejs variables");
-	config.processor.ejs_variables.files.map(file => {
-		try {
-			let extend = yaml.safeLoad(fs.readFileSync(file, 'utf8'));
-			obj = Object.assign(obj, extend);
-		} catch (err) { return log.fail(err), false; }
-	});
-	ejsRenderVariables = obj
-	return true;
+let R = {};
+function S() {
+	let a = {},b = A("load ejs variables");
+	return D.processor.ejs_variables.files.map((d) => {try {let b = e.safeLoad(c.readFileSync(d, 'utf8'));a = Object.assign(a, b);} catch (a) {return b.fail(a), !1;}}), R = a, !0;
 }
-function renderPages(callback) {
-	let log = start('render pages');
-	let files = globFiles(config.src_globs, { cwd: config.src });
-	console.log(` pages count: ${files.length}`);
-	Async.map(files, (name, callback) => {
-		let path = joinPath(config.src, name);
-		if (isPugFile(name) && processorConfig.pug.enable)
-			return render(null, pug.compileFile(path, getPugOptions(path))(ejsRenderVariables));
-		if (processorConfig.ejs.enable)
-			return ejs.renderFile(path, ejsRenderVariables, { root: config.src }, render);
-		readFile(path, render);
-
-		function render(err, content) {
-			if (err) return callback({ path, err });
-			if (processorConfig.ejs_template_tags.enable)
-				content = renderEjsTemplateTags(content);
-			if (processorConfig.html_minifier.enable) {
-				try { content = htmlMinifier.minify(content, processorConfig.html_minifier); }
-				catch (err) { return callback({ path, err });}
-			}
-			writeFileWithMkdirsSync(`${config.dist}/${name}`, content);
-			callback(null, true);
-		}
-	}, err => {
-		err ? log.fail(err.err, err.path) : log.done();
-		callback && callback(err);
+function T(a) {
+	let b = A('render pages'),
+	c = ia(D.src_globs, { cwd: D.src });
+	console.log(` pages count: ${c.length}`),
+	m.map(c, (a, b) => {
+		function c(c, e) {
+			if (c) return b({ path: d, err: c });
+			if (E.ejs_template_tags.enable && (e = V(e)), E.html_minifier.enable)
+				try {e = u.minify(e, E.html_minifier);}
+				catch (a) {return b({ path: d, err: a });}
+			ka(`${D.dist}/${a}`, e),
+			b(null, !0);
+		}let d = h(D.src, a);return O(a) && E.pug.enable ? c(null, p.compileFile(d, P(d))(R)) : E.ejs.enable ? o.renderFile(d, R, { root: D.src }, c) : void ja(d, c);
+	}, (c) => {
+		c ? b.fail(c.err, c.path) : b.done(),
+		a && a(c);
 	});
 }
-const DEFAULT_EJS_TEMPLATE_TAG_SELECTOR = 'script[type="text/template"]';
-function renderEjsTemplateTags(html) {
-	let selector = processorConfig.ejs_template_tags.selector || DEFAULT_EJS_TEMPLATE_TAG_SELECTOR;
-	console.log(`  selector: ${selector}`);
-	let ejsTagCache = [],	
-		random = parseInt(String(Math.random() * 10000)),
-		mark = `ejstagcache_${random}_`,
-		start = `${mark}start`, end = `${mark}end`,
-		recover = new RegExp(`${start}(\\d*)${end}`,'g');
+const U = 'script[type="text/template"]';
+function V(a) {
+	let b = E.ejs_template_tags.selector || U;
+	console.log(`  selector: ${b}`);
+	let d = [],
+	e = parseInt(1e4 * Math.random() + ''),
+	f = `ejstagcache_${e}_`,
+	g = `${f}start`,h = `${f}end`,
+	j = new RegExp(`${g}(\\d*)${h}`, 'g');
 	try {
-		let $ = cheerio.load(html);
-		let $tags = $(selector);
-		for (var i = 0; i < $tags.length; i++) {
-			let $tag = $tags.eq(i), html = fs.readFileSync(`${config.src}/${$tag.attr('src')}`, 'utf8');
-			if (processorConfig.html_minifier.enable)
-				html = htmlMinifier.minify(html, processorConfig.html_minifier);
-			$tag.html(html.replace(/<%([\s\S]*?)%>/g, match =>
-				(ejsTagCache.push(match), `${start}${ejsTagCache.length - 1}${end}`)));
-			$tag.removeAttr('src');
+		let e = t.load(a),
+		f = e(b);
+		for (var k = 0; k < f.length; k++) {
+			let a = f.eq(k),b = c.readFileSync(`${D.src}/${a.attr('src')}`, 'utf8');
+			E.html_minifier.enable && (
+			b = u.minify(b, E.html_minifier)),
+			a.html(b.replace(/<%([\s\S]*?)%>/g, (a) => (
+			d.push(a), `${g}${d.length - 1}${h}`))),
+			a.removeAttr('src');
 		}
-		let newHTML = $.html({ decodeEntities: false }); //避免中文被编码
-		return newHTML.replace(recover, (_, index) => ejsTagCache[index]);
-	} catch (err) {
-		console.error(`  error: render ejs template tags`.red, '\n', err.stack);
-		return html;
+		let i = e.html({ decodeEntities: !1 });
+		return i.replace(j, (a, b) => d[b]);
+	} catch (b) {
+		return console.error(`  error: render ejs template tags`.red, '\n', b.stack), a;
 	}
 }
-
-//>>>>>>>>>>> handlerScripts
-function handlerScripts(callback) {
-	if (hasCalledHandlerScriptsFunc) 
-		throw `handlerScripts could be only called one time!`;
-	hasCalledHandlerScriptsFunc = true;
-
-	let log = start('handler scripts');
-	let { src, dist } = config,	
-		files = globFiles(config.src_script_globs, { cwd: src });
-	Async.map(files, (name, cb) =>
-		browserifyAndBabel(joinPath(src, name), joinPath(dist, getTargetFileName(name)), cb),
-		() => (log.done(), callback && callback()));
+function W(a) {
+	if (I)
+	throw `handlerScripts could be only called one time!`;
+	I = !0;
+	let b = A('handler scripts'),
+	{ src: c, dist: d } = D,
+	e = ia(D.src_script_globs, { cwd: c });
+	m.map(e, (a, b) =>
+	X(h(c, a), h(d, ba(a)), b),
+	() => (b.done(), a && a()));
 }
-function browserifyAndBabel(from, to, _then) {
-	let scriptName = basename(to);
-	let isSourceMapOn = processorConfig.source_map.enable && processorConfig.source_map.js;
-	let then = _then;
-	
-	let b = browserify([from], {
-		debug: isSourceMapOn, basedir: dirname(to),
-		cache: {}, packageCache: {} // for watchify
-	});
-	// Running at watch mode if watchify is not null
-	if (watchify) {
-		b.plugin(watchify, processorConfig.watchify);
-		b.on('update', () => {
-			then = () => (console.log(`${from} updated!`), reloadJS());
-			b.bundle(bundleCallback);
-		});
-	}	
-	b.bundle(bundleCallback);
-
-	function bundleCallback(err, buffer) {
-		if (err) return console.error(`  error: browserify ${scriptName}`.red, "\n", err), then();	
-		let code = String(buffer);	
-		let map = null;
-		if (isSourceMapOn) {
-			map = JSON.parse(sourceMapConvert.fromSource(code).toJSON());
-			code = sourceMapConvert.removeMapFileComments(code);
-		}
-		if (processorConfig.babel.enable) {
-			let babel = babelTransform(getBabelrcPath(), scriptName, code, map);
-			if (babel.err) return then(babel.err);
-			code = babel.code; map = babel.map;
+function X(a, d, e) {
+	function f(a, b) {
+		if (a) return console.error(`  error: browserify ${h}`.red, "\n", a), l();
+		let e = b + '',
+		f = null;
+		if (k && (f = JSON.parse(y.fromSource(e).toJSON()), e = y.removeMapFileComments(e)), E.babel.enable) {
+			let a = Z(Y(), h, e, f);
+			if (a.err) return l(a.err);
+			e = a.code, f = a.map;
 		}
 		try {
-			writeFileWithMkdirsSync(to, code);
-			isSourceMapOn && fs.writeFileSync(`${to}.map`, JSON.stringify(map, null, '\t'));
-		} catch (ex) {
-			return console.error(`  error: write codes and sources map to target file failed!`.red, "\n", ex.stack || ex), then(ex);
+			ka(d, e),
+			k && c.writeFileSync(`${d}.map`, JSON.stringify(f, null, '\t'));
+		} catch (a) {
+			return console.error(`  error: write codes and sources map to target file failed!`.red, "\n", a.stack || a), l(a);
 		}
-		return then();
-	}
+		return l();
+	}let h = j(d),k = E.source_map.enable && E.source_map.js,l = e,m = g([a], { debug: k, basedir: i(d), cache: {}, packageCache: {} });x && (m.plugin(x, E.watchify), m.on('update', () => {l = () => (console.log(`${a} updated!`), H.js()), m.bundle(f);})), m.bundle(f);
 }
-function getBabelrcPath() {
-	let path = processorConfig.babel.babelrc;
-	if (path && !isAbsolute(path)) return joinPath(process.cwd(), path);
+function Y() {
+	let a = E.babel.babelrc;
+	if (a && !k(a)) return h(process.cwd(), a);
 }
-function babelTransform(babelrcPath, scriptName, codes, inSourcesMap = null) {
+function Z(a, b, c, d = null) {
 	try {
-		let options = inSourcesMap ? { sourceMaps: true, inputSourceMap: inSourcesMap } : {};
-		if (babelrcPath) options.extends = babelrcPath;
-		let result = babel.transform(codes, options);
+		let e = d ? { sourceMaps: !0, inputSourceMap: d } : {};a && (
+		e.extends = a);
+		let f = q.transform(c, e);
 		return {
-			code: inSourcesMap ? `${result.code}\n//# sourceMappingURL=${scriptName}.map` : result.code,
-			map: result.map
-		};
-	} catch (err) {
-		return console.error(`  error: babel transform ${scriptName}`.red, "\n", err.stack), { err };
+			code: d ? `${f.code}\n//# sourceMappingURL=${b}.map` : f.code,
+			map: f.map };
+	} catch (a) {
+		return B.e(a, `babel transform ${b}`), { err: a };
 	}
 }
-
-//>>>>>>>>>>> handlerStyles
-function handlerStyles(callback) {
-	let log = start('handler styles');
-	let { src, dist } = config,
-		files = globFiles(config.src_styles_globs, { cwd: src });
-	Async.map(files, (name, cb) =>
-		handlerSassLessAndCss(joinPath(src, name), joinPath(dist, getTargetFileName(name) ), cb),	
-		() => (log.done(), callback && callback()));
+function $(a) {
+	let b = A('handler styles'),
+	{ src: c, dist: d } = D,
+	e = ia(D.src_styles_globs, { cwd: c });
+	m.map(e, (a, b) =>
+	_(h(c, a), h(d, ba(a)), b),
+	() => (b.done(), a && a()));
 }
-function handlerSassLessAndCss(from, to, then) {
-	if (from.endsWith('less')) throw new Error('TODO: support less');
-	if (from.endsWith('.sass') || from.endsWith('.scss'))
-		return handlerSass(from, to, from.endsWith('.sass'), then);
-	if (from.endsWith('.css'))
-		return fs.copy(from, to, err => (err && console.error(`  error: copy css file: ${from}`)) + then());
-	console.error(`  warning: unknown style file format: ${from}`);
-	then();
+function _(a, b, d) {
+	if (a.endsWith('less')) throw new Error('TODO: support less');return (
+		a.endsWith('.sass') || a.endsWith('.scss') ?
+		aa(a, b, a.endsWith('.sass'), d) :
+		a.endsWith('.css') ?
+		c.copy(a, b, (b) => (b && console.error(`  error: copy css file: ${a}`)) + d()) : void (
+		console.error(`  warning: unknown style file format: ${a}`),
+		d()));
 }
-function handlerSass(from, to, indented, then){	
-	let styleName = basename(from);
-	let isSourceMapOn = processorConfig.source_map.enable && processorConfig.source_map.css;
-	let SourcesMapTo = `${to}.map`;
-	sass.render({
-		file: from,
-		indentedSyntax: false,
+function aa(a, b, d, e) {
+	let g = j(a),
+	h = E.source_map.enable && E.source_map.css,
+	i = `${b}.map`;
+	r.render({
+		file: a,
+		indentedSyntax: !1,
 		outputStyle: 'compressed',
-		outFile: to,
-		sourceMap: isSourceMapOn ? SourcesMapTo : void 0
-	}, (err, result) => {
-		if (err) return console.error(`  error: sass compile ${styleName}`.red, '\n', err), then();
-		postcss(autoprefixer ? [autoprefixer] : []).process(result.css, {
-			from: styleName,
-			to: basename(to),
-			map: isSourceMapOn ? { inline: false, prev: JSON.parse(result.map) } : void 0
-		}).then(result => {
-			let ws = result.warnings();
-			if (ws.length > 0) {
-				console.log(`warn: auto prefixer ${styleName}`.yellow.bold);
-				ws.forEach(warn => console.log(`  ${warn.toString()}`.yellow));
-			}
-			writeFileWithMkdirsSync(to, result.css);
-			isSourceMapOn && fs.writeFileSync(SourcesMapTo, JSON.stringify(result.map, null, '\t'));
-			then();
-		}).catch(err => {
-			console.error(`  error: auto prefixer ${styleName}`.red, '\n', err);
-			then();
-		})
-	});
-}		
-
-function getTargetFileName(fileName = '') {
-	if (fileName.endsWith('.jsx')) return fileName.replace(/\.jsx$/, '.js');
-	return fileName.replace(/\.s[ca]ss$/, '.css');
+		outFile: b,
+		sourceMap: h ? i : void 0 },
+	(a, d) => a ? (
+	console.error(`  error: sass compile ${g}`.red, '\n', a), e()) : void
+	f(s ? [s] : []).process(d.css, {
+		from: g,
+		to: j(b),
+		map: h ? { inline: !1, prev: JSON.parse(d.map.toString()) } : void 0 }).
+	then((a) => {
+		let d = a.warnings();
+		0 < d.length && (
+		console.log(`warn: auto prefixer ${g}`.yellow.bold),
+		d.forEach((a) => console.log(`  ${a.toString()}`.yellow))),
+		ka(b, a.css),
+		h && c.writeFileSync(i, JSON.stringify(a.map, null, '\t')),
+		e();
+	}).catch((a) => {
+		console.error(`  error: auto prefixer ${g}`.red, '\n', a),
+		e();
+	}));
 }
-
-function watchSources() {
-	if (processorConfig.browser_sync.enable){
-		bs = browserSync.create();
-		bs.init(processorConfig.browser_sync);
-	}	
-	watch.unwatchTree(config.src);
-	watch.watchTree(config.src, { interval: 0.5 }, function (path, curr, prev) {
-		if (typeof path == "object" && prev === null && curr === null)
-			return; //First time scan
-		//TODO accurately execute handler
-		console.log("watch >".bold, path);
-		if (path.endsWith('.yaml'))
-			return loadEjsVariables(), renderPages(reloadHTML);
-		if (path.endsWith('.html') || path.endsWith('.ejs') || path.endsWith('.pug') || path.endsWith('.jade'))
-			return renderPages(reloadHTML);
-		if (path.endsWith('.css') || path.endsWith('.sass') ||
-			path.endsWith('.scss') || path.endsWith('.less')) 
-			return handlerStyles(reloadCSS);
+function ba(a = '') {return (
+		a.endsWith('.jsx') ? a.replace(/\.jsx$/, '.js') :
+		a.replace(/\.s[ca]ss$/, '.css'));
+}
+function ca() {
+	E.browser_sync.enable && (
+	F = v.create(),
+	F.init(E.browser_sync)),
+	w.unwatchTree(D.src),
+	w.watchTree(D.src, { interval: 0.5 }, function (a, b, c) {
+		if ("object" != typeof a || null !== c || null !== b) {
+				let b = a + '';return (
+					console.log("watch >".bold, b),
+					b.endsWith('.yaml') ? (
+					S(), T(H.html)) :
+					b.endsWith('.html') || b.endsWith('.ejs') || b.endsWith('.pug') || b.endsWith('.jade') ?
+					T(H.html) :
+					b.endsWith('.css') || b.endsWith('.sass') ||
+					b.endsWith('.scss') || b.endsWith('.less') ?
+					$(H.css) : void 0);}
 	});
 }
-function reloadHTML() { reload('*.html') }
-function reloadJS() { reload('*.js') }
-function reloadCSS() { reload('*.css') }
-function reload(reloadFiles) {
-	buildCounter++;
-	execHook('after_build', () =>
-		bs && bs.reload(reloadFiles));
+function da() {
+	let a = process.argv,b = !1;return (
+		ga(a, '-h', '--help') ? ea() :
+		ga(a, '-V', '--version') ? fa() : (
+		ga(a, '-w', '--watch') && (b = !0),
+		{ watch: b }));
 }
-
-function loadLaunchParameters() {
-	return Options.description(`Frontend build script`)
-		.option('-w, --watch', 'turn on the watch mode')
-		.parse(process.argv);
+function ea() {
+	console.log([
+	`Usage: build.js [options] [configName]\n`,
+	`Version: ${a}`,
+	`Front-end build scripts pack\n`,
+	`Options:`,
+	`  -V --version  output the version info`,
+	`  -h --help     output this help info`,
+	`  -w --watch    turn on the watch building mode\n`,
+	`ConfigName:`,
+	`  [default]     build.config.yaml`,
+	`  dev           build.dev.config.yaml`,
+	`  prod          build.prod.config.yaml`,
+	`  <fileName>    load config from fileName you given`].
+	map((a) => '  ' + a).join('\n')),
+	process.exit(0);
 }
-
-//>>>>>>>>>>>> Execute Hook
-function execHook(hookName, then = EMPTY_CALLBACK) {
-	let hook = config.hook[hookName];
-	if (!hook) return then();
-
-	let { command, asynchronous } = hook,
-		log = start(`hook ${hookName}`);
-	exec(`${command} "${buildCounter}"`, { cwd: __dirname, encoding: 'utf8' },
-		(err, stdout, stderr) => {
-			if (stdout) stdout.trim().split('\n').map(line => `hook out: ${line}`).map(line => console.log(line));
-			if (stderr) stderr.trim().split('\n').map(line => `hook err: ${line}`).map(line => console.error(line));
-			err ? log.fail(err, `executing hook script "${hookName}" failed!`) : log.done();
-			if (!asynchronous) err ? then(err) : then();	
-		});
-	if (asynchronous) then();
+function fa() {
+	console.log(a),
+	process.exit(0);
 }
-//>>>>>>>>>>>> Glob
-function globFiles(globArray, options) {
-	let allFiles = [];
-	globArray.map(globStr => {
-		try {
-			allFiles = allFiles.concat(glob.sync(globStr, options));
-		} catch (err) {
-			console.error(`  error: invalid glob: ${glob}`);
-		}
-	});
-	return allFiles;
+function ga(a = [], ...b) {
+	for (let c of b) if (0 <= a.indexOf(c)) return !0;return !1;
 }
-//>>>>>>>>>>>>> ReadFile
-function readFile(path, cb = null) { return cb ? fs.readFile(path, 'utf8', cb) : fs.readFileSync(path, 'utf8'); }
-//>>>>>>>>>>>>> Write file
-function writeFileWithMkdirsSync(path, content) {
-	let dir = dirname(path);
-	fs.existsSync(dir) || fs.mkdirsSync(dir);
-	fs.writeFileSync(path, content);
+function ha(a, b = J) {
+	let c = D.hook[a];
+	if (!c) return b();
+	let { command: d, asynchronous: e } = c,
+	f = A(`hook ${a}`);
+	l(`${d} "${C}"`, { cwd: __dirname, encoding: 'utf8' },
+	(c, d, g) => {d &&
+		d.trim().split('\n').map((a) => `hook out: ${a}`).map((a) => console.log(a)), g &&
+		g.trim().split('\n').map((a) => `hook err: ${a}`).map((a) => console.error(a)),
+		c ? f.fail(c, `executing hook script "${a}" failed!`) : f.done(), e || (
+		c ? b(c) : b());
+	}), e &&
+	b();
 }
-
-main();
+function ia(a, b) {
+	let c = [];
+	return a.map((a) => {try {c = c.concat(d.sync(a, b));} catch (a) {console.error(`  error: invalid glob: ${d}`);}}), c;
+}
+function ja(a, b = null) {return b ? c.readFile(a, 'utf8', b) : c.readFileSync(a, 'utf8');}
+function ka(a, b) {
+	let d = i(a);
+	c.existsSync(d) || c.mkdirsSync(d),
+	c.writeFileSync(a, b);
+}
+K();

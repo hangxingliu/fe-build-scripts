@@ -4,6 +4,8 @@
   "description": "Frontend build scripts package",
   "main": "index.js",
   "scripts": {
+    "build": "./GENERATE_BUILD_SCRIPTS",
+    "build-live": "./GENERATE_BUILD_SCRIPTS --watch",
     "test-config-reader": "node test/config_reader.js"
   },
   "repository": {
@@ -24,11 +26,15 @@
     "async": "^2.5.0",
     "browserify": "^14.4.0",
     "colors": "^1.1.2",
-    "commander": "^2.11.0",
     "convert-source-map": "^1.5.0",
     "fs-extra": "^4.0.0",
     "glob": "^7.1.2",
     "js-yaml": "^3.9.0",
     "postcss": "^6.0.6"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-preset-minify": "^0.2.0",
+    "watch": "^1.0.2"
   }
 }

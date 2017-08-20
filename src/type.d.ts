@@ -1,3 +1,6 @@
+type ReloadObject = { html?: ReloadFunc; js?: ReloadFunc; css?: ReloadFunc;};
+type ReloadFunc = () => void;
+
 type ConfigObject = {
 	name: string;
 	dist: string;

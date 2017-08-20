@@ -1,178 +1,26 @@
+#!/usr/bin/env node
 /**
+ * @license Apache-2.0
+ * 
  * frontend build scripts
  * version: 0.6.2
- * date: 2017-08-19 02:58
+ * date: 2017-08-21 02:53
  */
-
-//@ts-check
-/// <reference path="type.d.ts" />
-
+const a = '0.6.2';
 (function () {
-	const DEFAULT = {
-		WATCHIFY: { delay: 100, ignoreWatch: ['**/node_modules/**'], poll: false }
-	};
-
-	const VALID_SYNC_HOOKS = ['before_all', 'after_build'];
-	const HOOK_ASYNC_PREFIX = 'async_';
-
-	const VALID_ASYNC_HOOKS = VALID_SYNC_HOOKS.map(name => HOOK_ASYNC_PREFIX + name);
-	const VALID_HOOKS = [].concat(VALID_ASYNC_HOOKS, VALID_SYNC_HOOKS);
-
-	let yaml = require('js-yaml'),
-		{ readFileSync } = require('fs-extra'),
-		{ join: joinPath } = require('path');
-	
-	/**
-	 * @param {string} filePath
-	 * @returns {ConfigObject}
-	 */
-	function reader(filePath) {
-		let configStr = readFileSync(filePath, 'utf8'),
-			config = yaml.safeLoad(configStr);
-		
-		if (!isString(config.name))
-			throw incompleteError(`config.name`, 'String');
-		
-		if (!isObject(config.src))
-			throw incompleteError(`config.src`, 'Object');
-		if (!isString(config.src.base))
-			throw incompleteError(`config.src.base`, 'String');
-		
-		if (isNull(config.src.scripts)) config.src.scripts = [];
-		if (isNull(config.src.styles)) config.src.styles = [];
-		if (!isStringOrStringArray(config.src.scripts))
-			throw incompleteError(`config.src.scripts`, 'String/String[]');
-		if (!isStringOrStringArray(config.src.styles))
-			throw incompleteError(`config.src.styles`, 'String/String[]');
-		
-		if (isObject(config.src.concat))
-			Object.keys(config.src.concat).map(key => {
-				if (!isStringArray(config.src.concat[key]))
-					throw incompleteError(`config.src.concat["${key}"]`, 'string[]');
-			});
-		
-		if (isObject(config.hook))
-			Object.keys(config.hook).map(hookName => {
-				if (VALID_HOOKS.indexOf(hookName) < 0) throw incompleteError(`config.hook["${hookName}"]`, `valid hook event name`);
-				if (!isString(config.hook[hookName]))
-					throw incompleteError(`config.hook["${hookName}"]`, `string`);
-			})
-
-		if (isNull(config.src.assets)) config.src.assets = [];
-		if (isNull(config.src.pages)) config.src.pages = [];
-		if (!isStringOrStringArray(config.src.assets))
-			throw incompleteError(`config.src.assets`, 'String/String[]');
-		if (!isStringOrStringArray(config.src.pages))
-			throw incompleteError(`config.src.pages`, 'String/String[]');
-
-		if (!isObject(config.dist))
-			throw incompleteError(`config.dist`, 'Object');
-		if (!isString(config.dist.base))
-			throw incompleteError(`config.dist.base`, 'String');
-		if (!isBoolean(config.dist.clean))
-			throw incompleteError(`config.dist.clean`, 'Boolean');
-
-		let basePath = process.cwd(),
-			distBasePath = joinPath(basePath, config.dist.base),
-			srcBasePath = joinPath(basePath, config.src.base);
-
-		/**
-		 * @type {ConfigObject}
-		 */
-		//@ts-ignore
-		let result = {};
-
-		result.name = config.name;
-		result.src = srcBasePath;
-		result.dist = distBasePath;
-		result.clean_dist = !!config.dist.clean;
-
-		let assetsConfig = config.src.assets;
-		result.src_assets = (isString(assetsConfig) ? [assetsConfig] : assetsConfig)
-			.map(path => ({ name: path, from: joinPath(srcBasePath, path), to: joinPath(distBasePath, path) }));
-		
-		let pagesConfig = config.src.pages;
-		result.src_globs = (isString(pagesConfig) ? [pagesConfig] : pagesConfig);
-		
-		let scriptsConfig = config.src.scripts;
-		result.src_script_globs = (isString(scriptsConfig) ? [scriptsConfig] : scriptsConfig);
-		let stylesConfig = config.src.styles;
-		result.src_styles_globs = (isString(stylesConfig) ? [stylesConfig] : stylesConfig);
-		
-		let concatConfig = config.src.concat || {};
-		result.concat = Object.keys(concatConfig).map(distFileName => ({
-			name: distFileName,
-			to: joinPath(distBasePath, distFileName),
-			from: concatConfig[distFileName].map(srcFileName => joinPath(srcBasePath, srcFileName))
-		}));
-
-		let hookConfig = config.hook || {},
-			hookResult = {};
-		Object.keys(hookConfig).map(hookName => {
-			hookResult[hookName.replace(HOOK_ASYNC_PREFIX, '')] = {
-				command: hookConfig[hookName],
-				asynchronous: hookName.startsWith(HOOK_ASYNC_PREFIX)
-			};
-		});
-		result.hook = hookResult;
-
-		/**
-		 * @type {ProcessorConfigObject}
-		 */
-		//@ts-ignore
-		let processor = {};
-		let configProcessor = config.processor || {};
-		
-		processor.sass = { enable: !!configProcessor.sass };
-		processor.less = { enable: !!configProcessor.less };
-		processor.autoprefixer = { enable: !!configProcessor.autoprefixer };
-		processor.ejs = { enable: !!configProcessor.ejs };
-		processor.pug = { enable: !!configProcessor.pug };
-
-		processor.watchify = Object.assign({}, DEFAULT.WATCHIFY, configProcessor.watchify || {});
-		if (processor.watchify.enable === false)
-			throw incompleteError(`processor.watchify.enable`, 'true/undefined');
-		delete processor.watchify.enable;
-
-		processor.source_map = isObjectHasEnableField(configProcessor.source_map)
-			? configProcessor.source_map
-			: { enable: !!configProcessor.source_map };
-		processor.html_minifier = isObjectHasEnableField(configProcessor.html_minifier)
-			? configProcessor.html_minifier
-			: { enable: !!configProcessor.html_minifier };
-		processor.browser_sync = isObjectHasEnableField(configProcessor.browser_sync)
-			? configProcessor.browser_sync
-			:{ enable: !!configProcessor.browser_sync };
-		processor.babel = isObjectHasEnableField(configProcessor.babel)
-			? configProcessor.babel
-			:{ enable: !!configProcessor.babel };
-		processor.ejs_variables =
-			isObjectHasEnableField(configProcessor.ejs_variables)
-				? configProcessor.ejs_variables
-				: { enable: !!configProcessor.ejs_variables };
-		processor.ejs_template_tags = isObjectHasEnableField(configProcessor.ejs_template_tags)
-			? configProcessor.ejs_template_tags
-			: { enable: !!configProcessor.ejs_template_tags };
-			
-		result.processor = processor;
-		return result;
-	
+	function a(a) {return !a && 'object' == typeof a;}
+	function b(a) {return a && 'object' == typeof a;}
+	function c(a) {return 'string' == typeof a;}
+	function d(a) {return 'boolean' == typeof a;}
+	function e(a) {
+		if (!Array.isArray(a)) return !1;
+		for (let b of a) if ('string' != typeof b) return !1;
+		return !0;
 	}
-	
-	function isNull(obj) { return !obj && typeof obj == 'object'; }
-	function isObject(obj) { return obj && typeof obj == 'object'; }
-	function isString(obj) { return typeof obj == 'string'; }
-	function isBoolean(obj) { return typeof obj == 'boolean'; }
-	function isStringArray(obj) { 
-		if (!Array.isArray(obj)) return false;
-		for (let it of obj) if (typeof it != 'string') return false;
-		return true;
+	function f(a) {return c(a) || e(a);}
+	function g(a, b) {
+		return new Error(`Config is incomplete. "${a}" is not a ${b}!`);
 	}
-	function isStringOrStringArray(obj) { return isString(obj) || isStringArray(obj); }
-	function incompleteError(name, type) {
-		return new Error(`Config is incomplete. "${name}" is not a ${type}!`);
-	}
-	function isObjectHasEnableField(obj) { return isObject(obj) && isBoolean(obj.enable); }
-	
-	module.exports = { read: reader };
+	function h(a) {return b(a) && d(a.enable);}const i = { WATCHIFY: { delay: 100, ignoreWatch: ['**/node_modules/**'], poll: !1 } },j = ['before_all', 'after_build'],k = 'async_',l = j.map((a) => k + a),m = [].concat(l, j);let n = require('js-yaml'),{ readFileSync: o } = require('fs-extra'),{ join: p } = require('path');
+	module.exports = { read: function (j) {let l = o(j, 'utf8'),q = n.safeLoad(l);if (!c(q.name)) throw g(`config.name`, 'String');if (!b(q.src)) throw g(`config.src`, 'Object');if (!c(q.src.base)) throw g(`config.src.base`, 'String');if (a(q.src.scripts) && (q.src.scripts = []), a(q.src.styles) && (q.src.styles = []), !f(q.src.scripts)) throw g(`config.src.scripts`, 'String/String[]');if (!f(q.src.styles)) throw g(`config.src.styles`, 'String/String[]');if (b(q.src.concat) && Object.keys(q.src.concat).map((a) => {if (!e(q.src.concat[a])) throw g(`config.src.concat["${a}"]`, 'string[]');}), b(q.hook) && Object.keys(q.hook).map((a) => {if (0 > m.indexOf(a)) throw g(`config.hook["${a}"]`, `valid hook event name`);if (!c(q.hook[a])) throw g(`config.hook["${a}"]`, `string`);}), a(q.src.assets) && (q.src.assets = []), a(q.src.pages) && (q.src.pages = []), !f(q.src.assets)) throw g(`config.src.assets`, 'String/String[]');if (!f(q.src.pages)) throw g(`config.src.pages`, 'String/String[]');if (!b(q.dist)) throw g(`config.dist`, 'Object');if (!c(q.dist.base)) throw g(`config.dist.base`, 'String');if (!d(q.dist.clean)) throw g(`config.dist.clean`, 'Boolean');let r = process.cwd(),s = p(r, q.dist.base),t = p(r, q.src.base),u = {};u.name = q.name, u.src = t, u.dist = s, u.clean_dist = !!q.dist.clean;let v = q.src.assets;u.src_assets = (c(v) ? [v] : v).map((a) => ({ name: a, from: p(t, a), to: p(s, a) }));let w = q.src.pages;u.src_globs = c(w) ? [w] : w;let x = q.src.scripts;u.src_script_globs = c(x) ? [x] : x;let y = q.src.styles;u.src_styles_globs = c(y) ? [y] : y;let z = q.src.concat || {};u.concat = Object.keys(z).map((a) => ({ name: a, to: p(s, a), from: z[a].map((a) => p(t, a)) }));let A = q.hook || {},B = {};Object.keys(A).map((a) => {B[a.replace(k, '')] = { command: A[a], asynchronous: a.startsWith(k) };}), u.hook = B;let C = {},D = q.processor || {};if (C.sass = { enable: !!D.sass }, C.less = { enable: !!D.less }, C.autoprefixer = { enable: !!D.autoprefixer }, C.ejs = { enable: !!D.ejs }, C.pug = { enable: !!D.pug }, C.watchify = Object.assign({}, i.WATCHIFY, D.watchify || {}), !1 === C.watchify.enable) throw g(`processor.watchify.enable`, 'true/undefined');return delete C.watchify.enable, C.source_map = h(D.source_map) ? D.source_map : { enable: !!D.source_map }, C.html_minifier = h(D.html_minifier) ? D.html_minifier : { enable: !!D.html_minifier }, C.browser_sync = h(D.browser_sync) ? D.browser_sync : { enable: !!D.browser_sync }, C.babel = h(D.babel) ? D.babel : { enable: !!D.babel }, C.ejs_variables = h(D.ejs_variables) ? D.ejs_variables : { enable: !!D.ejs_variables }, C.ejs_template_tags = h(D.ejs_template_tags) ? D.ejs_template_tags : { enable: !!D.ejs_template_tags }, u.processor = C, u;} };
 })();

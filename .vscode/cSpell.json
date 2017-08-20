@@ -8,6 +8,7 @@
     "words": [
         "Mkdirs",
         "ejstagcache",
+        "fname",
         "prefixer"
     ],
     // flagWords - list of words to be always considered incorrect
