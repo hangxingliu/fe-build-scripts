@@ -35,7 +35,9 @@ hook:
 
 processor:
     source_map:
-        enable: false
+        enable: true
+        js: true
+        css: true
     browserify:
         transform:
             - name: "babelify"
@@ -54,7 +56,7 @@ processor:
         enable: true
         server: "dist"
     babel: 
-        enable: true
+        enable: false
         babelrc: .babelrc
     html_minifier:
         enable: false

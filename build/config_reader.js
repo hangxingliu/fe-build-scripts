@@ -4,7 +4,7 @@
  * 
  * frontend build scripts
  * version: 1.0.0-alpha
- * date: 2017-08-21 07:07
+ * date: 2017-08-21 07:21
  */
 const a = '1.0.0-alpha';
 (function () {

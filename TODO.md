@@ -12,6 +12,7 @@
 - [x] support pug/jade
 - [x] support enable or disable source-map
 - [x] support browserSync
+- [x] support multi-config for building scripts
 - [x] support files concat (purely concatenate for libraries)
 	- [ ] support sources map for concatenated d file
 - [x] support extension name map (now support: .jsx => .js .sass/.scss => .css)
@@ -25,6 +26,5 @@
 - [ ] support pass source file system structure into ejs/pug variables
 - [ ] support parallel building
 	- [ ] average each scripts building to independent process to improve speed
-- [ ] support multi-config for building scripts
-- [ ] support dividing config to sub-config files
+- [ ] support dividing config to sub-config files (`extend`/`include`)
 - [ ] support download network file into dist folder

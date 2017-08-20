@@ -7,7 +7,8 @@ const VERSION = '???';
 
 /*eslint-disable no-console*/
 
-const CONFIG_FILE = `${__dirname}/build.config.yaml`;
+const DEFAULT_CONF_FILE = `${__dirname}/build.config.yaml`;
+let getConfigFileName = name => `build.${name}.config.yaml`;
 
 require('colors');
 
@@ -82,10 +83,13 @@ let _reload = files => { buildCounter++; bs && bs.reload(files) };
 ['html', 'css', 'js'].map(name => reload[name] = () => _reload(`*.${name}`));
 
 function main() {
-	let opts = loadLaunchParameters();
+	let opts = loadLaunchParameters(),
+		cfgFile = getConfigFile(opts.mode);
 	watchMode = opts.watch;
 
-	config = loadConfig(CONFIG_FILE);
+	if (!cfgFile) return error(`could not load config: ${opts.mode}`), exit(32);
+	console.log(`  config: ${cfgFile.bold}`);
+	config = loadConfig(cfgFile);
 	processorConfig = config.processor;
 	//加载相应的插件
 	loadProcessors(opts);
@@ -395,15 +399,24 @@ function watchSources() {
 }
 
 function loadLaunchParameters() {
-	let watch = false;
+	let opts = process.argv.slice(2);
+	let watch = false, mode = '';
 	if (hasOption('-h', '--help')) exit(0, getHelp());
 	if (hasOption('-V', '--version')) exit(0, VERSION);
 	if (hasOption('-w', '--watch')) watch = true;
-	return { watch };
+	for (let opt of opts) if (!opt.match(/^\-{1,}/)) { mode = opt; break; }
+	return { watch, mode };
 
 	function hasOption(...inc) {
-		for (let i of inc) if (process.argv.indexOf(i) >= 0) return true; return false;
+		for (let i of inc) if (opts.indexOf(i) >= 0) return true; return false;
 	}
+}
+function getConfigFile(mode = '') {
+	let path = ''
+	if (!mode) return DEFAULT_CONF_FILE;
+	if (fs.existsSync(path = joinPath(__dirname, mode))) return path;
+	if (fs.existsSync(path = joinPath(__dirname, getConfigFileName(mode)))) return path;
+	return '';
 }
 
 //>>>>>>>>>>>> Execute Hook
