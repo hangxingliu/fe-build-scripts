@@ -6,8 +6,16 @@
 	"configurations": [
 		{
 			"type": "node",
+			"protocol": "inspector",
+			"request": "attach",
+			"name": "Attach to test building",
+			"port": 9229,
+			"address": "localhost"
+		},
+		{
+			"type": "node",
 			"request": "launch",
-			"name": "Test config_reader",
+			"name": "Test building",
 			"program": "${workspaceRoot}/src/build.js",
 			"cwd": "${workspaceRoot}/test/env"
 		}
