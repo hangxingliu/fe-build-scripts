@@ -57,7 +57,7 @@ const VERSION = '???';
 		if (is.null(config.src.assets)) config.src.assets = [];
 		if (is.null(config.src.pages)) config.src.pages = [];
 		if (is.null(config.src.concat)) config.src.concat = {};
-		if (is.null(config.hook)) config.src.hook = {};
+		if (is.null(config.hook)) config.hook = {};
 
 		is.string(config.src.base) || throwNotAStringError(`src.base`);
 		is.stringOrStringArray(config.src.scripts) || throwNotAStringOrStringArrayError(`src.scripts`);

@@ -45,7 +45,7 @@ function startTask(name) {
 
 function loadYAMLFiles(files) {
 	let obj = {};
-	files.map(file => {
+	(files || []).map(file => {
 		try {
 			let extend = yaml.safeLoad(String(readFile(file)));
 			obj = Object.assign(obj, extend);
