@@ -1,0 +1,114 @@
+#!/usr/bin/env node
+
+//@ts-check
+const SRC_DIR = `${__dirname}/config-generator`;
+const BOWER_DIR = `${SRC_DIR}/bower_components`;
+const PAGE_FILE_SRC = `${SRC_DIR}/index.pug`;
+const SCRIPT_SRC = `${SRC_DIR}/index.js`;
+const STYLESHEET_SRC = `${SRC_DIR}/index.scss`;
+
+const TARGET = `${__dirname}/index.html`;
+
+let fs = require('fs'),
+	path = require('path'),
+	browserify = require('browserify'),
+	pug = require('pug'),
+	sass = require('node-sass'),
+	watch = require('watch');
+
+	// test babel dependencies
+	require('babelify');
+	require('babel-plugin-transform-object-rest-spread');
+	require('babel-preset-minify');
+
+let defaults = {};
+process.argv.indexOf('-w') > 0 || process.argv.indexOf('--watch') > 0 ? buildLive() : build();
+
+function buildSass() {
+	return new Promise((resolve, reject) => {
+		sass.render({
+			file: STYLESHEET_SRC,
+			indentedSyntax: false,
+			outputStyle: 'compressed',
+		}, (err, result) => {
+			if (err) return reject(err);
+			resolve(defaults.css = result.css);
+		});
+	});	
+}
+
+function buildScript() {
+	return new Promise((resolve, reject) => {
+		browserify(SCRIPT_SRC)
+			.transform("babelify", { presets: ["minify"], plugins: ["transform-object-rest-spread"] })
+			.bundle((err, js) => {
+				if (err) return reject(err);
+				return resolve(defaults.js = js);
+			})
+	});
+}
+
+function buildPug() {
+	return new Promise((resolve, reject) => {
+		pug.renderFile(PAGE_FILE_SRC, (err, html) => {
+			if (err) return reject(err);
+			return resolve(defaults.html = html);
+		});
+	});
+}
+
+function readBower(relativePath) {
+	return new Promise((resolve, reject) => {
+		fs.readFile(path.join(BOWER_DIR, relativePath), 'utf8', (err, content) => {
+			if (err) return reject(err);
+			return resolve(content);
+		});
+	});
+}
+
+
+function build() {
+	Promise.all([
+		defaults.html || buildPug(),
+		defaults.css || buildSass(),
+		defaults.js || buildScript(),
+		defaults.jqJs || readBower(`jquery/dist/jquery.min.js`),
+		defaults.matJs || readBower(`materialize/dist/js/materialize.min.js`),
+		defaults.matCss || readBower(`materialize/dist/css/materialize.min.css`),
+	]).then(([
+		html,
+		css,
+		js,
+		jQueryJs,
+		materializeJs,
+		materializeCss,
+	]) => {
+		//Replace Materialize.css font
+		materializeCss = materializeCss.replace(/@font-face.+?\}/g, '');
+
+		defaults.jqJs = jQueryJs;
+		defaults.matJs = materializeJs;
+		defaults.matCss = materializeCss;
+		html = html.replace('__INJECT_JS__', js)
+			.replace('__INJECT_CSS__', css)
+			.replace('__INJECT_JQUERY__', jQueryJs)
+			.replace('__INJECT_MATERIALIZE_JS__', materializeJs)
+			.replace('__INJECT_MATERIALIZE_CSS__', materializeCss);
+		fs.writeFileSync(TARGET, html);
+		console.log('build success!');
+	}).catch(err => console.error(err));
+
+}
+
+function buildLive() {
+	watch.unwatchTree(SRC_DIR);
+	watch.watchTree(SRC_DIR, { interval: 0.5 }, function (path, curr, prev) {
+		if (typeof path == "object" && prev === null && curr === null)
+			return build(); //First time scan
+		let p = String(path);
+		if (p.endsWith('.js')) delete defaults.js;
+		if (p.endsWith('.pug')) delete defaults.html;
+		if (p.endsWith('.scss')) delete defaults.css;
+		return build();
+	});
+}
