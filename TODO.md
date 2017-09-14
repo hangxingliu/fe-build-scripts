@@ -19,6 +19,7 @@
 	- [ ] support custom extension name map
 - [x] support add browserify transform
 	- [ ] support add browserify plugins
+- [ ] avoid deleting outside folder
 - [ ] support less
 - [ ] support CSS compression
 - [ ] support install build script into project automatically 
