@@ -3,10 +3,10 @@
  * @license Apache-2.0
  * 
  * frontend build scripts
- * version: 1.0.0-alpha
- * date: 2017-08-21 07:21
+ * version: 1.0.1-alpha
+ * date: 2017-09-15 06:25
  */
-const a = '1.0.0-alpha';
+const a = '1.0.1-alpha';
 require('colors');
 let b = require('glob'),
 c = require('fs-extra'),
@@ -37,7 +37,7 @@ function h(a) {
 }
 function i(a) {
 	let b = {};
-	return a.map((a) => {try {let c = d.safeLoad(j(a) + '');b = Object.assign(b, c);} catch (a) {return null;}}), b;
+	return (a || []).map((a) => {try {let c = d.safeLoad(j(a) + '');b = Object.assign(b, c);} catch (a) {return null;}}), b;
 }
 function j(a, b = null) {
 	return b ? c.readFile(a, 'utf8', b) : c.readFileSync(a, 'utf8');

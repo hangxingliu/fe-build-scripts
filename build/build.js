@@ -3,10 +3,10 @@
  * @license Apache-2.0
  * 
  * frontend build scripts
- * version: 1.0.0-alpha
- * date: 2017-08-21 07:21
+ * version: 1.0.1-alpha
+ * date: 2017-09-15 06:25
  */
-const a = '1.0.0-alpha',
+const a = '1.0.1-alpha',
 b = `${__dirname}/build.config.yaml`;
 let c = (a) => `build.${a}.config.yaml`;
 require('colors');
@@ -245,7 +245,7 @@ function ha(a, b, c, e) {
 	i = `${b}.map`;
 	B.render({
 		file: a,
-		indentedSyntax: !1,
+		indentedSyntax: c,
 		outputStyle: 'compressed',
 		outFile: b,
 		sourceMap: h ? i : void 0 },

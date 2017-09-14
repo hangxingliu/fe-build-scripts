@@ -32,7 +32,7 @@ const VERSION = '???';
 		},
 		objectHasEnableField: obj => is.object(obj) && is.boolean(obj.enable)
 	};
-	const eachItem = (obj, it) => Object.keys(obj).map(key => it(key, obj[key]));
+	const eachItem = (obj, it) => obj && Object.keys(obj).map(key => it(key, obj[key]));
 
 	let yaml = require('js-yaml'),
 		{ readFileSync } = require('fs-extra'),

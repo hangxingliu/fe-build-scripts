@@ -344,7 +344,7 @@ function handlerSass(from, to, indented, then){
 	let SourcesMapTo = `${to}.map`;
 	sass.render({
 		file: from,
-		indentedSyntax: false,
+		indentedSyntax: indented,
 		outputStyle: 'compressed',
 		outFile: to,
 		sourceMap: isSourceMapOn ? SourcesMapTo : void 0
