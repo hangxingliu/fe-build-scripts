@@ -260,6 +260,7 @@ function browserifyAndBabel(from, to, _then) {
 	let then = _then;
 	
 	let b = browserify([from], {
+		extensions: [ ".jsx" ],
 		debug: isSourceMapOn, basedir: dirname(to),
 		cache: {}, packageCache: {} // for watchify
 	});

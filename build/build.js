@@ -3,10 +3,10 @@
  * @license Apache-2.0
  * 
  * frontend build scripts
- * version: 1.0.1-alpha
- * date: 2017-09-15 06:25
+ * version: 1.0.3-alpha
+ * date: 2017-10-16 02:15
  */
-const a = '1.0.1-alpha',
+const a = '1.0.3-alpha',
 b = `${__dirname}/build.config.yaml`;
 let c = (a) => `build.${a}.config.yaml`;
 require('colors');
@@ -204,7 +204,7 @@ function ca(a, c, e) {
 			return console.error(`  error: write codes and sources map to target file failed!`.red, "\n", a.stack || a), l(a);
 		}
 		return l();
-	}let h = j(c),k = N.source_map.enable && N.source_map.js,l = e,m = g([a], { debug: k, basedir: i(c), cache: {}, packageCache: {} });N.browserify.transform.map(({ name: a, options: b }) => m.transform(a, b)), L && (m.plugin(H, N.watchify), m.on('update', () => {l = () => (console.log(`${a} updated!`), Q.js()), m.bundle(f);})), m.bundle(f);
+	}let h = j(c),k = N.source_map.enable && N.source_map.js,l = e,m = g([a], { extensions: ['.jsx'], debug: k, basedir: i(c), cache: {}, packageCache: {} });N.browserify.transform.map(({ name: a, options: b }) => m.transform(a, b)), L && (m.plugin(H, N.watchify), m.on('update', () => {l = () => (console.log(`${a} updated!`), Q.js()), m.bundle(f);})), m.bundle(f);
 }
 function da() {
 	let a = N.babel.babelrc;
