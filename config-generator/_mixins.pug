@@ -1,0 +1,13 @@
+mixin input(id, label, _type, required, placeholder)
+	label(for=id)
+		span=label
+		span &nbsp;&nbsp;
+		if required
+			b *
+		else
+			i (Optional)
+	input(id=id class="pure-u-23-24" type=_type placeholder=placeholder)
+
+mixin inputReadOnly(id, label, _type, value)
+	label(for=id)=label
+	input(id=id class="pure-u-23-24" type=_type readonly="readonly" value=value)

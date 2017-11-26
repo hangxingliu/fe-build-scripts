@@ -2,15 +2,15 @@
 
 //@ts-check
 const SRC_DIR = `${__dirname}/config-generator`;
-const BOWER_DIR = `${SRC_DIR}/bower_components`;
-const PAGE_FILE_SRC = `${SRC_DIR}/index.pug`;
+const ZEPTO_SRC = `${SRC_DIR}/libs/zepto.min.js`;
+const PURECSS_SRC = `${SRC_DIR}/libs/pure.min.css`;
+const PAGE_FILE_SRC = `${SRC_DIR}/_layout.pug`;
 const SCRIPT_SRC = `${SRC_DIR}/index.js`;
 const STYLESHEET_SRC = `${SRC_DIR}/index.scss`;
 
 const TARGET = `${__dirname}/index.html`;
 
 let fs = require('fs'),
-	path = require('path'),
 	browserify = require('browserify'),
 	pug = require('pug'),
 	sass = require('node-sass'),
@@ -32,7 +32,7 @@ function buildSass() {
 			outputStyle: 'compressed',
 		}, (err, result) => {
 			if (err) return reject(err);
-			resolve(defaults.css = result.css);
+			resolve(result.css);
 		});
 	});	
 }
@@ -43,7 +43,7 @@ function buildScript() {
 			.transform("babelify", { presets: ["minify"], plugins: ["transform-object-rest-spread"] })
 			.bundle((err, js) => {
 				if (err) return reject(err);
-				return resolve(defaults.js = js);
+				return resolve(js.toString());
 			})
 	});
 }
@@ -52,48 +52,36 @@ function buildPug() {
 	return new Promise((resolve, reject) => {
 		pug.renderFile(PAGE_FILE_SRC, (err, html) => {
 			if (err) return reject(err);
-			return resolve(defaults.html = html);
+			return resolve(html);
 		});
 	});
 }
 
-function readBower(relativePath) {
-	return new Promise((resolve, reject) => {
-		fs.readFile(path.join(BOWER_DIR, relativePath), 'utf8', (err, content) => {
-			if (err) return reject(err);
-			return resolve(content);
-		});
-	});
+function readFile(path) { 
+	return new Promise((resolve, reject) =>
+		fs.readFile(path, 'utf8', (err, ctx) =>
+			err ? reject(err) : resolve(ctx)));
 }
-
 
 function build() {
 	Promise.all([
 		defaults.html || buildPug(),
 		defaults.css || buildSass(),
 		defaults.js || buildScript(),
-		defaults.jqJs || readBower(`jquery/dist/jquery.min.js`),
-		defaults.matJs || readBower(`materialize/dist/js/materialize.min.js`),
-		defaults.matCss || readBower(`materialize/dist/css/materialize.min.css`),
+		defaults.zepto || readFile(ZEPTO_SRC),
+		defaults.purecss || readFile(PURECSS_SRC)
 	]).then(([
 		html,
 		css,
 		js,
-		jQueryJs,
-		materializeJs,
-		materializeCss,
+		zepto,
+		purecss
 	]) => {
-		//Replace Materialize.css font
-		materializeCss = materializeCss.replace(/@font-face.+?\}/g, '');
-
-		defaults.jqJs = jQueryJs;
-		defaults.matJs = materializeJs;
-		defaults.matCss = materializeCss;
+		defaults = { html, css, js, zepto, purecss };
 		html = html.replace('__INJECT_JS__', js)
 			.replace('__INJECT_CSS__', css)
-			.replace('__INJECT_JQUERY__', jQueryJs)
-			.replace('__INJECT_MATERIALIZE_JS__', materializeJs)
-			.replace('__INJECT_MATERIALIZE_CSS__', materializeCss);
+			.replace('__INJECT_ZEPTO_JS__', zepto)
+			.replace('__INJECT_PURECSS__', purecss)
 		fs.writeFileSync(TARGET, html);
 		console.log('build success!');
 	}).catch(err => console.error(err));

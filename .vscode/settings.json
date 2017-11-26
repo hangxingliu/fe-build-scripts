@@ -1,5 +1,10 @@
 {
 	"css.remoteStyleSheets": [
 		"http://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css"
+	],
+	"cSpell.words": [
+		"PURECSS",
+		"unpkg",
+		"zepto"
 	]
 }

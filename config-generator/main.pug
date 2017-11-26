@@ -1,0 +1,29 @@
+include ./_mixins.pug
+#main
+	.header
+		h1 Config Generator
+		h2 
+			| Generate your 
+			code build.*.config.yaml
+	.content
+		h2 Basic information
+		.pure-form.pure-g
+			.pure-u-1-3
+				+input('cfgName', 'Project Name', 'text', true)
+		.pure-form.pure-g
+			.pure-u-1-3
+				+input('cfgName', 'Config Name', 'text')
+			.pure-u-1-3
+				+inputReadOnly('cfgFileName', 'File Name', 'text', 'build.config.yaml')
+		.pure-form.pure-g
+			.pure-u-1-3
+				+input('cfgSrc', 'Sources directory', 'text', true, 'src')
+			.pure-u-1-3
+				+input('cfgDist', 'Target directory', 'text', true, 'dist')
+			.pure-u-1-3
+				label.single-checkbox.pure-checkbox(for="cleanDist")
+					input#cleanDist(type="checkbox" checked="checked")
+					| Clean target before building
+		button.pure-button.pure-button-primary(type="submit") Download
+		h2 Preview
+		pre: code#preview
