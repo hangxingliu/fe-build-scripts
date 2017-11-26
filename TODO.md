@@ -1,5 +1,7 @@
 # TODO
 
+- [ ] detect dangerous target clean action.
+- [ ] fix source map is missing in mode babel off and browserify on
 - [x] fix bug: the enable of babel is invalid
 - [x] fix bug: html minify error make build script crash
 - [x] fix bug: sass file with .sass extension name will cause source-map file name wrong
